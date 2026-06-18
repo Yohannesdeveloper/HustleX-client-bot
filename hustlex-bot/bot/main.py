@@ -258,7 +258,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard = [
         [KeyboardButton(messages['post_telegram']), KeyboardButton(messages['post_website'], web_app=WebAppInfo(url=f"{WEBAPP_URL}"))],
-        [KeyboardButton(messages['profile'], web_app=WebAppInfo(url=f"{WEBAPP_URL}profile.html")), KeyboardButton(messages['applications'])],
+        [KeyboardButton(messages['profile'], web_app=WebAppInfo(url=f"{WEBAPP_URL}profile.html")), KeyboardButton(messages['applications'], web_app=WebAppInfo(url="https://hustlexet.vercel.app/my-applications"))],
         [KeyboardButton(messages['about']), KeyboardButton(messages['settings'])],
         [KeyboardButton(messages.get('delete_post', 'Delete Post'))],
     ]
