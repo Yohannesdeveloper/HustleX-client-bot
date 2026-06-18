@@ -1,6 +1,6 @@
 # bot/main.py
 # States for Telegram Job Posting
-JOB_TITLE, JOB_TYPE, WORK_LOCATION, SALARY, DEADLINE, DESCRIPTION, CLIENT_TYPE, JOB_LINK, COMPANY_NAME, VERIFIED, PREVIOUS_JOBS, DELETE_POST_SELECT = range(12)
+JOB_TITLE, JOB_TYPE, WORK_LOCATION, SALARY, DEADLINE, DESCRIPTION, CLIENT_TYPE, JOB_LINK, COMPANY_NAME, VERIFIED, PREVIOUS_JOBS = range(11)
 import os
 import re
 import logging
@@ -175,13 +175,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     menu_messages = {
         'en': {
             'title': "Choose a tab:",
-            'post_telegram': "Post Job in Telegram",
-            'post_website': "Post Job via Website",
             'profile': "Profile",
             'applications': "Applications",
             'about': "About HustleX",
             'settings': "Settings",
-            'delete_post': "Delete Post",
             'error': "❌ Error: WebApp URL is unreachable. Please try again later or contact support."
         },
         'es': {
@@ -257,10 +254,8 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     keyboard = [
-        [KeyboardButton(messages['post_telegram']), KeyboardButton(messages['post_website'], web_app=WebAppInfo(url=f"{WEBAPP_URL}"))],
         [KeyboardButton(messages['profile'], web_app=WebAppInfo(url=f"{WEBAPP_URL}profile.html")), KeyboardButton(messages['applications'], web_app=WebAppInfo(url="https://hustlexet.vercel.app/my-applications"))],
-        [KeyboardButton(messages['about']), KeyboardButton(messages['settings'])],
-        [KeyboardButton(messages.get('delete_post', 'Delete Post'))],
+        [KeyboardButton(messages['about']), KeyboardButton(messages['settings'])]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
     
@@ -289,20 +284,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'Menú': 'menu',
         'ሜኑ': 'menu',  # Amharic menu
         # Start menu
-        'Post Job in Telegram': 'post_job_telegram',
-        'Publicar Trabajo en Telegram': 'post_job_telegram',
-        'Publier un Emploi sur Telegram': 'post_job_telegram',
-        'Stelle in Telegram veröffentlichen': 'post_job_telegram',
-        'Pubblica Lavoro su Telegram': 'post_job_telegram',
-        'Publicar Emprego no Telegram': 'post_job_telegram',
-        'ሥራን በቴሌግራም ያስቀምጡ': 'post_job_telegram',
-        'Post Job via Website': 'post_job_website',
-        'Publicar Trabajo vía Sitio Web': 'post_job_website',
-        'Publier un Emploi via le Site Web': 'post_job_website',
-        'Stelle über Website veröffentlichen': 'post_job_website',
-        'Pubblica Lavoro via Sito Web': 'post_job_website',
-        'Publicar Emprego via Site': 'post_job_website',
-        'ሥራን በድር ጣቢያ ያስቀምጡ': 'post_job_website',
         'Profile': 'profile',
         'Perfil': 'profile',
         'Profil': 'profile',
@@ -327,12 +308,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'Impostazioni': 'settings',
         'Configurações': 'settings',
         'ቅንብሮች': 'settings',
-        'Delete Post': 'delete_post',
-        'Eliminar Publicación': 'delete_post',
-        'Supprimer la Publication': 'delete_post',
-        'Beitrag Löschen': 'delete_post',
-        'Elimina Post': 'delete_post',
-        'ትርጉም አጥፍ': 'delete_post',
         # Back buttons
         '⬅️ Back to Menu': 'menu',
         '⬅️ Volver al Menú': 'menu',
@@ -454,18 +429,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await settings_cv_cb(update, context)
     elif action == 'settings_terms':
         await settings_terms_cb(update, context)
-    elif action == 'delete_post':
-        # Handle delete post
-        if user_id not in user_posts or not user_posts[user_id]:
-            await update.effective_message.reply_text("❌ You have no posts to delete!", parse_mode="Markdown")
-            return
-        # Show list of posts
-        post_list = "📋 *Your Posts*\n\n"
-        for i, post in enumerate(user_posts[user_id], 1):
-            post_list += f"{i}. {post['title']}\n"
-        post_list += "\nReply with the number of the post you want to delete:"
-        await update.effective_message.reply_text(post_list, parse_mode="Markdown")
-        return DELETE_POST_SELECT
     elif action and action.startswith('lang_'):
         # Handle language selection
         lang_code = action.split('_')[1]
@@ -2194,38 +2157,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         except Exception:
             pass  # If we can't even send a message, just log it
 
-async def delete_post_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id not in user_posts or not user_posts[user_id]:
-        await update.effective_message.reply_text("❌ You have no posts to delete!", parse_mode="Markdown")
-        return ConversationHandler.END
-    # Show list of posts
-    post_list = "📋 *Your Posts*\n\n"
-    for i, post in enumerate(user_posts[user_id], 1):
-        post_list += f"{i}. {post['title']}\n"
-    post_list += "\nReply with the number of the post you want to delete:"
-    await update.effective_message.reply_text(post_list, parse_mode="Markdown")
-    return DELETE_POST_SELECT
 
-async def delete_post_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    text = update.effective_message.text.strip()
-    try:
-        post_index = int(text) - 1
-        if user_id not in user_posts or post_index < 0 or post_index >= len(user_posts[user_id]):
-            await update.effective_message.reply_text("❌ Invalid post number! Please try again.", parse_mode="Markdown")
-            return DELETE_POST_SELECT
-        
-        post = user_posts[user_id][post_index]
-        # Delete the message from the channel
-        await context.bot.delete_message(chat_id=post['channel_id'], message_id=post['message_id'])
-        # Remove from user_posts
-        user_posts[user_id].pop(post_index)
-        await update.effective_message.reply_text("✅ Post deleted successfully!", parse_mode="Markdown")
-        return ConversationHandler.END
-    except ValueError:
-        await update.effective_message.reply_text("❌ Please enter a valid number!", parse_mode="Markdown")
-        return DELETE_POST_SELECT
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
@@ -2240,8 +2172,7 @@ def main():
     job_post_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(post_job_start, pattern="^post_job_telegram$"),
                       CommandHandler("postjob", post_job_start),
-                      MessageHandler(filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$'), post_job_start),
-                      MessageHandler(filters.Regex(r'^Delete Post$') | filters.Regex(r'^Eliminar Publicación$') | filters.Regex(r'^Supprimer la Publication$') | filters.Regex(r'^Beitrag Löschen$') | filters.Regex(r'^Elimina Post$') | filters.Regex(r'^ትርጉም አጥፍ$'), delete_post_start)],
+                      MessageHandler(filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$'), post_job_start)],
         states={
             JOB_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_title)],
             JOB_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_type)],
@@ -2254,7 +2185,6 @@ def main():
             VERIFIED: [MessageHandler(filters.TEXT & ~filters.COMMAND, verified)],
             PREVIOUS_JOBS: [MessageHandler(filters.TEXT & ~filters.COMMAND, previous_jobs)],
             JOB_LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_link)],
-            DELETE_POST_SELECT: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_post_select)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
         per_chat=True
