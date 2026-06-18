@@ -255,12 +255,9 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     keyboard = [
-        [KeyboardButton(messages['post_telegram'])],
-        [KeyboardButton(messages['post_website'], web_app=WebAppInfo(url=f"{WEBAPP_URL}"))],
-        [KeyboardButton(messages['profile'], web_app=WebAppInfo(url=f"{WEBAPP_URL}profile.html"))],
-        [KeyboardButton(messages['applications'])],
-        [KeyboardButton(messages['about'])],
-        [KeyboardButton(messages['settings'])],
+        [KeyboardButton(messages['post_telegram']), KeyboardButton(messages['post_website'], web_app=WebAppInfo(url=f"{WEBAPP_URL}"))],
+        [KeyboardButton(messages['profile'], web_app=WebAppInfo(url=f"{WEBAPP_URL}profile.html")), KeyboardButton(messages['applications'])],
+        [KeyboardButton(messages['about']), KeyboardButton(messages['settings'])],
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
     
@@ -572,10 +569,8 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     messages = settings_messages.get(lang_code, settings_messages['en'])
     
     keyboard = [
-        [KeyboardButton(messages['languages'])],
-        [KeyboardButton(messages['account'])],
-        [KeyboardButton(messages['cv'])],
-        [KeyboardButton(messages['terms'])],
+        [KeyboardButton(messages['languages']), KeyboardButton(messages['account'])],
+        [KeyboardButton(messages['cv']), KeyboardButton(messages['terms'])],
         [KeyboardButton(messages['back'])]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
@@ -672,12 +667,9 @@ async def settings_languages_cb(update: Update, context: ContextTypes.DEFAULT_TY
     msg = messages.get(current_lang, messages['en'])
     
     keyboard = [
-        [KeyboardButton("🇺🇸 English")],
-        [KeyboardButton("🇪🇸 Español")],
-        [KeyboardButton("🇫🇷 Français")],
-        [KeyboardButton("🇩🇪 Deutsch")],
-        [KeyboardButton("🇮🇹 Italiano")],
-        [KeyboardButton("🇵🇹 Português")],
+        [KeyboardButton("🇺🇸 English"), KeyboardButton("🇪🇸 Español")],
+        [KeyboardButton("🇫🇷 Français"), KeyboardButton("🇩🇪 Deutsch")],
+        [KeyboardButton("🇮🇹 Italiano"), KeyboardButton("🇵🇹 Português")],
         [KeyboardButton("🇪🇹 አማርኛ (Amharic)")],
         [KeyboardButton(msg['back'])]
     ]
