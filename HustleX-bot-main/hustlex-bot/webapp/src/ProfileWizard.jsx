@@ -22,8 +22,18 @@ export default function ProfileWizard(){
     if (cvFile) fd.append('cv', cvFile);
 
     const res = await fetch('/api/profile', { method: 'POST', body: fd });
-    if (res.ok) window.Telegram.WebApp.close();
-    else alert('Save failed');
+    if (res.ok) {
+      // Send data back to bot to trigger menu and close immediately
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.sendData(JSON.stringify({action: 'profile_complete'}));
+        window.Telegram.WebApp.close();
+      } else {
+        alert('Profile saved successfully!');
+        window.close();
+      }
+    } else {
+      alert('Save failed');
+    }
   }
 
   return (
