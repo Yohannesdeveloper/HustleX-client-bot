@@ -38,7 +38,15 @@ def get_mongodb_connection():
     global mongo_client, db, registered_users_collection
     try:
         if mongo_client is None:
-            mongo_client = MongoClient(MONGODB_URI)
+            # Add connection pooling and timeout settings for faster connections
+            mongo_client = MongoClient(
+                MONGODB_URI,
+                maxPoolSize=50,
+                minPoolSize=5,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=5000,
+                serverSelectionTimeoutMS=5000
+            )
             db = mongo_client.get_database()
             registered_users_collection = db.registered_users
             logger.info("Successfully connected to MongoDB")

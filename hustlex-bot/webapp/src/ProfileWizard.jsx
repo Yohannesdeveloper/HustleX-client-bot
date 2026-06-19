@@ -1,18 +1,30 @@
-// webapp/src/ProfileWizard.jsx (simplified)
-import React, {useState, useEffect} from 'react';
+// webapp/src/ProfileWizard.jsx (optimized for fast loading)
+import React, {useState, useEffect, useCallback} from 'react';
 
 export default function ProfileWizard(){
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [sex, setSex] = useState('');
   const [cvFile, setCvFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (window.Telegram?.WebApp) window.Telegram.WebApp.expand();
+    // Optimize Telegram WebApp initialization - run immediately without delay
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.expand();
+      // Pre-enable the main button for better UX
+      if (window.Telegram.WebApp.MainButton) {
+        window.Telegram.WebApp.MainButton.setText('Save Profile');
+        window.Telegram.WebApp.MainButton.show();
+      }
+    }
   }, []);
 
-  async function submit(e){
+  const submit = useCallback(async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
     const initData = window.Telegram?.WebApp?.initData || '';
     const fd = new FormData();
     fd.append('name', name);
@@ -21,18 +33,29 @@ export default function ProfileWizard(){
     fd.append('initData', initData);
     if (cvFile) fd.append('cv', cvFile);
 
-    const res = await fetch('/api/profile', { method: 'POST', body: fd });
-    if (res.ok) {
-      // Store initData for authentication on job-listings page
-      if (initData) {
-        localStorage.setItem('telegram_init_data', initData);
+    try {
+      const res = await fetch('/api/profile', { 
+        method: 'POST', 
+        body: fd,
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(30000)
+      });
+      if (res.ok) {
+        // Store initData for authentication on job-listings page
+        if (initData) {
+          localStorage.setItem('telegram_init_data', initData);
+        }
+        // Redirect to job-listings as logged-in user
+        window.location.href = 'https://hustlexet.vercel.app/job-listings';
+      } else {
+        alert('Save failed');
       }
-      // Redirect to job-listings as logged-in user
-      window.location.href = 'https://hustlexet.vercel.app/job-listings';
-    } else {
-      alert('Save failed');
+    } catch (error) {
+      alert('Save failed: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  }, [name, age, sex, cvFile, isSubmitting]);
 
   return (
     <form onSubmit={submit} style={{padding:20}}>
@@ -45,7 +68,9 @@ export default function ProfileWizard(){
       </select>
       <label>Upload CV (PDF)</label>
       <input type="file" accept=".pdf" onChange={e=>setCvFile(e.target.files[0])} />
-      <button type="submit">Save profile</button>
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Saving...' : 'Save profile'}
+      </button>
     </form>
   );
 }

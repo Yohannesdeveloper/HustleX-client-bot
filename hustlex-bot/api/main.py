@@ -7,13 +7,15 @@ import httpx
 from typing import Optional
 from pymongo import MongoClient
 from datetime import datetime
+import asyncio
+import aiofiles
 
 app = FastAPI()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1003194542999")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://yohannesfk123:CKNujByIaepiwyGf@cluster0.mrtm8aj.mongodb.net/hustlex?retryWrites=true&w=majority&appName=Cluster0")
 
-# MongoDB connection
+# MongoDB connection with connection pooling
 mongo_client = None
 db = None
 
@@ -21,7 +23,15 @@ def get_mongodb_connection():
     global mongo_client, db
     try:
         if mongo_client is None:
-            mongo_client = MongoClient(MONGODB_URI)
+            # Add connection pooling and timeout settings for faster connections
+            mongo_client = MongoClient(
+                MONGODB_URI,
+                maxPoolSize=50,
+                minPoolSize=5,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=5000,
+                serverSelectionTimeoutMS=5000
+            )
             db = mongo_client.get_database()
         return db
     except Exception as e:
@@ -73,23 +83,25 @@ async def save_profile(
     
     # Handle CV file if provided
     if cv_file:
-        # Save the CV file
+        # Save the CV file asynchronously
         file_path = f"uploads/cv/{cv_file.filename}"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
-        with open(file_path, "wb") as f:
-            f.write(await cv_file.read())
+        content = await cv_file.read()
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(content)
         
         profile_data["cv_file_path"] = file_path
     
     # Handle profile picture if provided
     if profile_pic:
-        # Save the profile picture
+        # Save the profile picture asynchronously
         pic_path = f"uploads/profile_pics/{profile_pic.filename}"
         os.makedirs(os.path.dirname(pic_path), exist_ok=True)
         
-        with open(pic_path, "wb") as f:
-            f.write(await profile_pic.read())
+        content = await profile_pic.read()
+        async with aiofiles.open(pic_path, "wb") as f:
+            await f.write(content)
         
         profile_data["profile_pic_file_path"] = pic_path
     
