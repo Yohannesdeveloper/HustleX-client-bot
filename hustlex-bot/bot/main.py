@@ -11,6 +11,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 from telegram.error import TelegramError
 from urllib.parse import urlparse
 import aiohttp
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 
 # Set up logging
 logging.basicConfig(
@@ -23,7 +25,61 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://hustlexeth.netlify.app/")
-DATABASE_URL = os.getenv("DATABASE_URL")  # Unused in current code, placeholder for future integration
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://yohannesfk123:CKNujByIaepiwyGf@cluster0.mrtm8aj.mongodb.net/hustlex?retryWrites=true&w=majority&appName=Cluster0")
+
+# MongoDB connection setup
+mongo_client = None
+db = None
+registered_users_collection = None
+
+def get_mongodb_connection():
+    """Get MongoDB connection and collection"""
+    global mongo_client, db, registered_users_collection
+    try:
+        if mongo_client is None:
+            mongo_client = MongoClient(MONGODB_URI)
+            db = mongo_client.get_database()
+            registered_users_collection = db.registered_users
+            logger.info("Successfully connected to MongoDB")
+        return registered_users_collection
+    except ConnectionFailure as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        return None
+
+def is_user_registered(user_id: int) -> bool:
+    """Check if user is registered in MongoDB"""
+    collection = get_mongodb_connection()
+    if collection is None:
+        return False
+    try:
+        user = collection.find_one({"user_id": user_id})
+        return user is not None
+    except Exception as e:
+        logger.error(f"Error checking user registration: {e}")
+        return False
+
+def register_user(user_id: int, username: str = None, first_name: str = None) -> bool:
+    """Register user in MongoDB"""
+    collection = get_mongodb_connection()
+    if collection is None:
+        return False
+    try:
+        user_data = {
+            "user_id": user_id,
+            "username": username,
+            "first_name": first_name,
+            "registered_at": datetime.utcnow()
+        }
+        collection.update_one(
+            {"user_id": user_id},
+            {"$setOnInsert": user_data},
+            upsert=True
+        )
+        logger.info(f"User {user_id} registered successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error registering user: {e}")
+        return False
 
 # Simple in-memory storage for CV data and user preferences (replace with database in production)
 user_cvs = {}
@@ -88,6 +144,45 @@ def escape_markdown_v2(text: str) -> str:
     return re.sub(special_chars, r'\\\1', str(text))
 
 # ---------------------------
+# /register_complete command
+# ---------------------------
+async def register_complete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Mark user as registered after completing registration on the website"""
+    user_id = update.effective_user.id
+    lang_code = user_languages.get(user_id, 'en')
+    
+    # Register user in MongoDB
+    username = update.effective_user.username
+    first_name = update.effective_user.first_name
+    success = register_user(user_id, username, first_name)
+    
+    if not success:
+        error_message = "❌ Failed to register. Please try again later."
+        if update.effective_message:
+            await update.effective_message.reply_text(error_message)
+        else:
+            await update.effective_chat.send_message(error_message)
+        return
+    
+    # Language-specific confirmation messages
+    confirmation_messages = {
+        'en': "✅ Registration complete! Welcome to HustleX. Use /start to access the menu.",
+        'es': "✅ ¡Registro completado! Bienvenido a HustleX. Usa /start para acceder al menú.",
+        'fr': "✅ Inscription terminée! Bienvenue sur HustleX. Utilisez /start pour accéder au menu.",
+        'de': "✅ Registrierung abgeschlossen! Willkommen bei HustleX. Verwenden Sie /start für das Menü.",
+        'it': "✅ Registrazione completata! Benvenuto su HustleX. Usa /start per accedere al menu.",
+        'pt': "✅ Registro completo! Bem-vindo ao HustleX. Use /start para acessar o menu.",
+        'am': "✅ ምዝገባ ተጠናቋል! ወደ HustleX እንኳን ደህና መጡ. ሜኑን ለመድረስ /start ይጠቀሙ።"
+    }
+    
+    message = confirmation_messages.get(lang_code, confirmation_messages['en'])
+    
+    if update.effective_message:
+        await update.effective_message.reply_text(message)
+    else:
+        await update.effective_chat.send_message(message)
+
+# ---------------------------
 # /start command
 # ---------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -100,6 +195,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang_code = user_languages.get(user_id, 'en')
     
+    # Check if user is already registered in MongoDB
+    if is_user_registered(user_id):
+        # User is registered, show menu
+        await menu_callback(update, context)
+        return
+    
+    # User is not registered, show register inline keyboard
     # Language-specific welcome messages
     welcome_messages = {
         'en': {
@@ -2169,6 +2271,7 @@ def main():
 
     # Command handlers
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("register_complete", register_complete))
     app.add_handler(CommandHandler("menu", menu_callback))
     app.add_handler(CommandHandler("about", about_cb))
     app.add_handler(CommandHandler("applications", applications_cb))
