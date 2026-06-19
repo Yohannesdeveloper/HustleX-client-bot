@@ -9,8 +9,18 @@ from pymongo import MongoClient
 from datetime import datetime
 import asyncio
 import aiofiles
+import json
 
 app = FastAPI()
+
+class RegisterRequest(BaseModel):
+    first_name: str
+    last_name: str
+    gender: str
+    dob: str
+    country: str
+    city: str
+    init_data: str
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1003194542999")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://yohannesfk123:CKNujByIaepiwyGf@cluster0.mrtm8aj.mongodb.net/hustlex?retryWrites=true&w=majority&appName=Cluster0")
@@ -66,9 +76,17 @@ async def save_profile(
     
     # Extract user_id from init_data
     params = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
-    user_id = params.get("user")
-    if user_id:
-        user_id = int(user_id)
+    user_str = params.get("user")
+    user_id = None
+    if user_str:
+        try:
+            user_data = json.loads(user_str)
+            user_id = user_data.get("id")
+        except Exception:
+            try:
+                user_id = int(user_str)
+            except Exception:
+                pass
     
     # Process the profile data
     profile_data = {
@@ -128,3 +146,70 @@ async def save_profile(
             print(f"Error saving to MongoDB: {e}")
     
     return {"status": "success", "message": "Profile saved successfully"}
+
+@app.post("/api/register")
+async def register_user_endpoint(payload: RegisterRequest):
+    # Verify the init_data
+    if not verify_init_data(payload.init_data, BOT_TOKEN):
+        raise HTTPException(status_code=401, detail="Invalid initData")
+    
+    # Extract user_id from init_data
+    params = dict(urllib.parse.parse_qsl(payload.init_data, keep_blank_values=True))
+    user_str = params.get("user")
+    user_id = None
+    if user_str:
+        try:
+            user_data = json.loads(user_str)
+            user_id = user_data.get("id")
+        except Exception:
+            try:
+                user_id = int(user_str)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Invalid user ID in initData")
+    
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing user ID in initData")
+    
+    # Store registration details
+    profile_data = {
+        "name": f"{payload.first_name} {payload.last_name}".strip(),
+        "first_name": payload.first_name,
+        "last_name": payload.last_name,
+        "sex": payload.gender,
+        "gender": payload.gender,
+        "dob": payload.dob,
+        "country": payload.country,
+        "city": payload.city,
+        "updated_at": datetime.utcnow()
+    }
+    
+    # Save to MongoDB
+    database = get_mongodb_connection()
+    if database:
+        try:
+            # Save user profile details
+            database.profiles.update_one(
+                {"user_id": user_id},
+                {"$set": profile_data},
+                upsert=True
+            )
+            
+            # Mark user as registered in registered_users collection
+            database.registered_users.update_one(
+                {"user_id": user_id},
+                {"$set": {
+                    "user_id": user_id,
+                    "first_name": payload.first_name,
+                    "last_name": payload.last_name,
+                    "registered_at": datetime.utcnow()
+                }},
+                upsert=True
+            )
+            print(f"User {user_id} successfully registered via Mini App")
+        except Exception as e:
+            print(f"Error saving registration to MongoDB: {e}")
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    else:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
+        
+    return {"status": "success", "message": "Registration complete!"}

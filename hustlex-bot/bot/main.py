@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env
 load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://hustlexeth.netlify.app/")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://hustlexet.vercel.app/")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://yohannesfk123:CKNujByIaepiwyGf@cluster0.mrtm8aj.mongodb.net/hustlex?retryWrites=true&w=majority&appName=Cluster0")
 
 # MongoDB connection setup
@@ -95,6 +95,7 @@ user_cvs = {}
 user_languages = {}
 user_profiles = {}
 user_posts = {}  # Stores user posts: {user_id: [{"message_id": 123, "title": "Job Title", ...}]}
+registered_users = set()
 
 # Helper function to validate bot token
 async def validate_bot_token(token: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -217,39 +218,138 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Language-specific welcome messages
     welcome_messages = {
         'en': {
-            'welcome': "Welcome to HustleX! 🚀\n\nClick the button below to register and get started.",
+            'welcome': (
+                "👋 Welcome to HustleX! 🚀\n\n"
+                "HustleX is a premium marketplace connecting top-tier freelancers with amazing opportunities. 💼✨\n\n"
+                "To get started, you must first register your account. Here is how you can do it:\n"
+                "1️⃣ Click the 📝 Register button below.\n"
+                "2️⃣ Fill out your basic details in the Mini App (First Name, Last Name, Gender, Date of Birth, Country, City).\n"
+                "3️⃣ Accept the Terms of Service.\n"
+                "4️⃣ Click the Register button to finalize your profile!\n\n"
+                "Once registered, you'll gain full access to:\n"
+                "👤 Freelancer Profile & CV Uploads\n"
+                "📋 Job Postings & Match Notifications\n"
+                "🤝 Direct Communication with Clients\n"
+                "💼 A dashboard to track your application status\n\n"
+                "Let's begin your journey! Click below to set up your account. 👇"
+            ),
             'register': "📝 Register"
         },
         'es': {
-            'welcome': "¡Bienvenido a HustleX! 🚀\n\nHaz clic en el botón de abajo para registrarte y comenzar.",
+            'welcome': (
+                "👋 ¡Bienvenido a HustleX! 🚀\n\n"
+                "HustleX es un mercado premium que conecta a freelancers de nivel superior con oportunidades increíbles. 💼✨\n\n"
+                "Para comenzar, primero debes registrar tu cuenta. Así es como puedes hacerlo:\n"
+                "1️⃣ Haz clic en el botón 📝 Registrarse abajo.\n"
+                "2️⃣ Completa tus datos básicos en la Mini App (Nombre, Apellido, Género, Fecha de nacimiento, País, Ciudad).\n"
+                "3️⃣ Acepta los Términos de servicio.\n"
+                "4️⃣ ¡Haz clic en el botón Registrarse para finalizar tu perfil!\n\n"
+                "Una vez registrado, tendrás acceso completo a:\n"
+                "👤 Perfil de freelancer y carga de CV\n"
+                "📋 Ofertas de trabajo y notificaciones de correspondencia\n"
+                "🤝 Comunicación directa con clientes\n"
+                "💼 Un panel para seguir tus postulaciones\n\n"
+                "¡Comencemos tu viaje! Haz clic abajo para configurar tu cuenta. 👇"
+            ),
             'register': "📝 Registrarse"
         },
         'fr': {
-            'welcome': "Bienvenue sur HustleX! 🚀\n\nCliquez sur le bouton ci-dessous pour vous inscrire et commencer.",
+            'welcome': (
+                "👋 Bienvenue sur HustleX ! 🚀\n\n"
+                "HustleX est une plateforme premium qui met en relation des freelances de premier plan avec des opportunités incroyables. 💼✨\n\n"
+                "Pour commencer, vous devez d'abord enregistrer votre compte. Voici comment procéder :\n"
+                "1️⃣ Cliquez sur le bouton 📝 S'inscrire ci-dessous.\n"
+                "2️⃣ Remplissez vos informations de base dans la Mini App (Prénom, Nom, Genre, Date de naissance, Pays, Ville).\n"
+                "3️⃣ Acceptez les Conditions d'utilisation.\n"
+                "4️⃣ Cliquez sur le bouton S'inscrire pour finaliser votre profil !\n\n"
+                "Une fois inscrit, vous aurez un accès complet à :\n"
+                "👤 Profil freelance & Téléchargement de CV\n"
+                "📋 Offres d'emploi & Notifications de correspondance\n"
+                "🤝 Communication directe avec les clients\n"
+                "💼 Un tableau de bord pour suivre vos candidatures\n\n"
+                "Commençons votre voyage ! Cliquez ci-dessous pour créer votre compte. 👇"
+            ),
             'register': "📝 S'inscrire"
         },
         'de': {
-            'welcome': "Willkommen bei HustleX! 🚀\n\nKlicken Sie unten auf die Schaltfläche, um sich zu registrieren und zu beginnen.",
+            'welcome': (
+                "👋 Willkommen bei HustleX! 🚀\n\n"
+                "HustleX ist ein Premium-Marktplatz, der erstklassige Freelancer mit fantastischen Möglichkeiten verbindet. 💼✨\n\n"
+                "Um zu beginnen, müssen Sie zuerst Ihr Konto registrieren. So können Sie es tun:\n"
+                "1️⃣ Klicken Sie unten auf die Schaltfläche 📝 Registrieren.\n"
+                "2️⃣ Füllen Sie Ihre Basisdaten in der Mini App aus (Vorname, Nachname, Geschlecht, Geburtsdatum, Land, Stadt).\n"
+                "3️⃣ Akzeptieren Sie die Nutzungsbedingungen.\n"
+                "4️⃣ Klicken Sie auf die Schaltfläche Registrieren, um Ihr Profil fertigzustellen!\n\n"
+                "Nach der Registrierung erhalten Sie vollen Zugriff auf:\n"
+                "👤 Freelancer-Profil & Lebenslauf-Uploads\n"
+                "📋 Stellenausschreibungen & Match-Benachrichtigungen\n"
+                "🤝 Direkte Kommunikation mit Kunden\n"
+                "💼 Ein Dashboard zur Verfolgung Ihrer Bewerbungen\n\n"
+                "Lassen Sie uns Ihre Reise beginnen! Klicken Sie unten, um Ihr Konto einzurichten. 👇"
+            ),
             'register': "📝 Registrieren"
         },
         'it': {
-            'welcome': "Benvenuto su HustleX! 🚀\n\nClicca sul pulsante sottostante per registrarti e iniziare.",
+            'welcome': (
+                "👋 Benvenuto su HustleX! 🚀\n\n"
+                "HustleX è un mercato premium che collega i migliori freelance con fantastiche opportunità. 💼✨\n\n"
+                "Per iniziare, devi prima registrare il tuo account. Ecco come puoi farlo:\n"
+                "1️⃣ Clicca sul pulsante 📝 Registrati qui sotto.\n"
+                "2️⃣ Inserisci i tuoi dati di base nella Mini App (Nome, Cognome, Genere, Data di nascita, Paese, Città).\n"
+                "3️⃣ Accetta i Termini di servizio.\n"
+                "4️⃣ Clicca sul pulsante Registrati per completare il tuo profilo!\n\n"
+                "Una volta registrato, avrai pieno accesso a:\n"
+                "👤 Profilo freelance & Caricamento CV\n"
+                "📋 Offerte di lavoro & Notifiche di corrispondenza\n"
+                "🤝 Comunicazione diretta con i clienti\n"
+                "💼 Una dashboard per tracciare le tue candidature\n\n"
+                "Iniziamo il tuo viaggio! Clicca qui sotto per configurare il tuo account. 👇"
+            ),
             'register': "📝 Registrati"
         },
         'pt': {
-            'welcome': "Bem-vindo ao HustleX! 🚀\n\nClique no botão abaixo para se registrar e começar.",
+            'welcome': (
+                "👋 Bem-vindo ao HustleX! 🚀\n\n"
+                "HustleX é um mercado premium que conecta freelancers de alto nível com oportunidades incríveis. 💼✨\n\n"
+                "Para começar, você deve primeiro registrar sua conta. Veja como fazer isso:\n"
+                "1️⃣ Clique no botão 📝 Registrar abaixo.\n"
+                "2️⃣ Preencha seus detalhes básicos no Mini App (Nome, Sobrenome, Gênero, Data de nascimento, País, Cidade).\n"
+                "3️⃣ Aceite os Termos de Serviço.\n"
+                "4️⃣ Clique no botão Registrar para finalizar seu perfil!\n\n"
+                "Depois de registrado, você terá acesso total a:\n"
+                "👤 Perfil de freelancer e uploads de CV\n"
+                "📋 Vagas de emprego e notificações de correspondência\n"
+                "🤝 Comunicação direta com clientes\n"
+                "💼 Um painel para acompanhar suas candidaturas\n\n"
+                "Vamos começar sua jornada! Clique abaixo para configurar sua conta. 👇"
+            ),
             'register': "📝 Registrar"
         },
         'am': {
-            'welcome': "ወደ HustleX እንኳን ደህና መጡ! 🚀\n\nለመመዝገብ እና ለመጀመር ከታች ያለውን አዝራር ይጫኑ።",
+            'welcome': (
+                "👋 ወደ HustleX እንኳን ደህና መጡ! 🚀\n\n"
+                "HustleX ከፍተኛ ችሎታ ያላቸውን ፍሪላንሰሮችን ከአስደናቂ የስራ ዕድሎች ጋር የሚያገናኝ የላቀ የገበያ ቦታ ነው። 💼✨\n\n"
+                "ለመጀመር በመጀመሪያ መለያዎን መመዝገብ አለብዎት። እንዴት ማድረግ እንደሚችሉ እዚህ አለ፡-\n"
+                "1️⃣ ከታች ያለውን 📝 መዝገብ የሚለውን ቁልፍ ይጫኑ።\n"
+                "2️⃣ መሰረታዊ መረጃዎን በሚኒ አፑ ላይ ይሙሉ (የመጀመሪያ ስም፣ የአባት ስም፣ ጾታ፣ የልደት ቀን፣ አገር፣ ከተማ)።\n"
+                "3️⃣ የአገልግሎት ውሎችን ይቀበሉ።\n"
+                "4️⃣ መገለጫዎን ለማጠናቀቅ መዝገብ የሚለውን ቁልፍ ይጫኑ!\n\n"
+                "አንዴ ከተመዘገቡ በኋላ የሚከተሉትን ሙሉ መዳረሻ ያገኛሉ፡-\n"
+                "👤 የፍሪላንሰር መገለጫ እና የሲቪ ጭነቶች\n"
+                "📋 የስራ ማስታወቂያዎች እና የግጥሚያ ማሳወቂያዎች\n"
+                "🤝 ከደንበኞች ጋር ቀጥተኛ ግንኙነት\n"
+                "💼 ማመልከቻዎትን ለመከታተል ዳሽቦርድ\n\n"
+                "ጉዞዎን እንጀምር! መለያዎን ለማዘጋጀት ከታች ይጫኑ። 👇"
+            ),
             'register': "📝 መዝገብ"
         }
     }
     
     messages = welcome_messages.get(lang_code, welcome_messages['en'])
     
-    # Create inline keyboard with register button
-    keyboard = [[InlineKeyboardButton(messages['register'], url="https://hustlexet.vercel.app/Register")]]
+    # Create inline keyboard with register button (WebAppInfo requires inline keyboard for mini apps)
+    register_url = f"{WEBAPP_URL.rstrip('/')}/Register"
+    keyboard = [[InlineKeyboardButton(messages['register'], web_app=WebAppInfo(url=register_url))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if update.effective_message:
@@ -377,19 +477,13 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     messages = menu_messages.get(lang_code, menu_messages['en'])
     
-    # Validate WebApp URL before showing menu
-    if not await validate_webapp_url(WEBAPP_URL):
-        if update.effective_message:
-            await update.effective_message.reply_text(messages['error'])
-        else:
-            await update.effective_chat.send_message(messages['error'])
-        return
-    
+    # Use inline keyboard for web app buttons (WebAppInfo requires InlineKeyboardMarkup for mini apps)
     keyboard = [
-        [KeyboardButton(messages['profile'], web_app=WebAppInfo(url="https://hustlexet.vercel.app/freelancer-profile-setup")), KeyboardButton(messages['applications'], web_app=WebAppInfo(url="https://hustlexet.vercel.app/my-applications"))],
-        [KeyboardButton(messages['about']), KeyboardButton(messages['settings'])]
+        [InlineKeyboardButton(messages['profile'], web_app=WebAppInfo(url="https://hustlexet.vercel.app/freelancer-profile-setup")), 
+         InlineKeyboardButton(messages['applications'], web_app=WebAppInfo(url="https://hustlexet.vercel.app/my-applications"))],
+        [InlineKeyboardButton(messages['about']), InlineKeyboardButton(messages['settings'])]
     ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
+    reply_markup = InlineKeyboardMarkup(keyboard)
     
     # Build menu message with descriptions
     menu_text = f"{messages['title']}\n\n"

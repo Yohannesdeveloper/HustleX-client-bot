@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HustleX - Freelancer Profile Setup</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: var(--tg-theme-bg-color, #f5f5f5);
+      color: var(--tg-theme-text-color, #333);
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: var(--tg-theme-secondary-bg-color, #fff);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #00bcd4;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--tg-theme-hint-color, #666);
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--tg-theme-hint-color, #ddd);
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #333);
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #00bcd4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #00acc1;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .error {
+      color: #f44336;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>HustleX — Create Profile</h2>
+    <form id="profileForm">
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="age">Age</label>
+        <input type="number" id="age" name="age" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="sex">Sex</label>
+        <select id="sex" name="sex" required>
+          <option value="">Select</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="cv_file">Upload CV (PDF)</label>
+        <input type="file" id="cv_file" name="cv_file" accept=".pdf" required>
+      </div>
+      
+      <button type="submit" id="submitBtn">Save Profile</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('profileForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Initialize Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.expand();
+      
+      // Set up main button
+      if (tg.MainButton) {
+        tg.MainButton.setText('Save Profile');
+        tg.MainButton.show();
+        
+        tg.MainButton.onClick(() => {
+          form.dispatchEvent(new Event('submit'));
+        });
+      }
+      
+      // Pre-fill user data from Telegram
+      const user = tg.initDataUnsafe?.user;
+      if (user) {
+        document.getElementById('name').value = [user.first_name, user.last_name].filter(Boolean).join(' ') || '';
+      }
+    }
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+      
+      const name = document.getElementById('name').value;
+      const age = document.getElementById('age').value;
+      const sex = document.getElementById('sex').value;
+      const cvFile = document.getElementById('cv_file').files[0];
+      
+      const initData = window.Telegram?.WebApp?.initData || '';
+      
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('age', age);
+      formData.append('sex', sex);
+      formData.append('initData', initData);
+      if (cvFile) {
+        formData.append('cv', cvFile);
+      }
+      
+      try {
+        const response = await fetch('/api/profile', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          // Store initData for authentication on next pages
+          if (initData) {
+            localStorage.setItem('telegram_init_data', initData);
+          }
+          
+          // Redirect to job-listings or close the web app
+          if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.close();
+          } else {
+            window.location.href = 'https://hustlexet.vercel.app/job-listings';
+          }
+        } else {
+          alert('Save failed. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Save Profile';
+        }
+      } catch (error) {
+        alert('Save failed: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Profile';
+      }
+    });
+  </script>
+</body>
+</html>

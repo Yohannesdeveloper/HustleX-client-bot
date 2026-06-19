@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/Register",
+      "destination": "/register.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/register.html"
+    },
+    {
+      "source": "/freelancer-profile-setup",
+      "destination": "/freelancer-profile-setup.html"
+    },
+    {
+      "source": "/post-job",
+      "destination": "/post-job.html"
+    }
+  ]
+}
