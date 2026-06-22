@@ -301,33 +301,29 @@ async def prompt_profile_setup(update: Update, context: ContextTypes.DEFAULT_TYP
     lang_code = user_languages.get(user_id, 'en')
     job_id = get_pending_job_id(context)
     profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={job_id}"
-    keyboard = [[InlineKeyboardButton("👤 Complete Profile Setup", web_app=WebAppInfo(url=profile_url))]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     messages = {
-        'en': "📝 Next step: complete your freelancer profile to start applying for jobs.",
+        'en': f"📝 Next step: complete your freelancer profile to start applying for jobs.\n\nClick here: {profile_url}",
     }
     message = messages.get(lang_code, messages['en'])
     chat = update.effective_chat
     if update.effective_message:
-        await update.effective_message.reply_text(message, reply_markup=reply_markup)
+        await update.effective_message.reply_text(message)
     else:
-        await chat.send_message(message, reply_markup=reply_markup)
+        await chat.send_message(message)
 
 async def send_job_details(update: Update, context: ContextTypes.DEFAULT_TYPE, job_id: str = None):
     job_id = job_id or get_pending_job_id(context)
     job_details_url = f"{WEBAPP_URL.rstrip('/')}/job-details/{job_id}"
-    keyboard = [[InlineKeyboardButton("📋 View Job Details", web_app=WebAppInfo(url=job_details_url))]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     user_id = update.effective_user.id
     lang_code = user_languages.get(user_id, 'en')
     messages = {
-        'en': "👋 Welcome! Here are the job details:",
+        'en': f"👋 Welcome! Here are the job details:\n\n{job_details_url}",
     }
     message = messages.get(lang_code, messages['en'])
     if update.effective_message:
-        await update.effective_message.reply_text(message, reply_markup=reply_markup)
+        await update.effective_message.reply_text(message)
     else:
-        await update.effective_chat.send_message(message, reply_markup=reply_markup)
+        await update.effective_chat.send_message(message)
 
 async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Route a registered user through phone → profile → job details."""
@@ -550,9 +546,9 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.pop("awaiting_phone", None)
         await update.message.reply_text(
             "✅ Phone number saved! 📱\n\nNext: complete your freelancer profile.",
-            reply_markup=ReplyKeyboardRemove(),
         )
         await prompt_profile_setup(update, context)
+        await menu_callback(update, context)
     elif contact:
         await update.message.reply_text("Please share your own phone number using the Share button.")
 
