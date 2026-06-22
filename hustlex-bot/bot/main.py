@@ -342,12 +342,8 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
     if context.user_data.get("awaiting_phone"):
         return
 
-    if not has_user_phone(user_id):
-        await prompt_phone_share(update, context)
-        return
-
     if not is_profile_setup_complete(user_id):
-        await menu_callback(update, context)
+        await prompt_profile_setup(update, context)
         return
 
     if job_id:
