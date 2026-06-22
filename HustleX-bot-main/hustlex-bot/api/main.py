@@ -155,6 +155,13 @@ async def serve_register_page():
     html_path = Path(__file__).resolve().parent.parent / "register.html"
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), status_code=200)
 
+# ── Serve freelancer profile setup page ────────────────────────────────────────
+@app.get("/freelancer-profile-setup", response_class=HTMLResponse)
+async def serve_freelancer_profile_setup_page():
+    """Serve the freelancer profile setup HTML for the Telegram Mini App."""
+    html_path = Path(__file__).resolve().parent.parent / "freelancer-profile-setup.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), status_code=200)
+
 # ── Send Telegram message helper ──────────────────────────────────
 async def send_telegram_message(chat_id: int, text: str):
     """Send a message to a Telegram user via the Bot API."""

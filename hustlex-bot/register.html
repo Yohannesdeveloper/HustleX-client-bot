@@ -416,12 +416,9 @@
           submitBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
           errorMsg.style.display = 'none';
         
-          if (tg) {
-            setTimeout(() => { tg.close(); }, 1200);
-          } else {
-            alert('Registration completed successfully! Check the bot for next steps.');
-            form.reset();
-          }
+          setTimeout(() => {
+            window.location.href = '/freelancer-profile-setup';
+          }, 1200);
         } else {
           const detail = data.detail;
           const message = typeof detail === 'string'
