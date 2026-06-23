@@ -290,11 +290,23 @@ async def prompt_phone_share(update: Update, context: ContextTypes.DEFAULT_TYPE)
         [KeyboardButton("❌ Cancel")],
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-    chat = update.effective_chat
-    if update.effective_message:
-        await update.effective_message.reply_text(message, reply_markup=reply_markup)
-    else:
-        await chat.send_message(message, reply_markup=reply_markup)
+
+    logger.info(f"prompt_phone_share called for user {user_id}, chat: {update.effective_chat.id if update.effective_chat else 'None'}")
+
+    try:
+        if update.effective_message:
+            await update.effective_message.reply_text(message, reply_markup=reply_markup)
+            logger.info(f"Message sent via effective_message for user {user_id}")
+        else:
+            chat = update.effective_chat
+            if not chat:
+                logger.error(f"No effective_chat available for user {user_id}")
+                return
+            await chat.send_message(message, reply_markup=reply_markup)
+            logger.info(f"Message sent via chat.send_message for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error sending phone share prompt to user {user_id}: {e}")
+        raise
 
 async def prompt_profile_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -367,7 +379,17 @@ async def register_complete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     registered_users.add(user_id)
-    await prompt_phone_share(update, context)
+
+    try:
+        await prompt_phone_share(update, context)
+    except Exception as e:
+        logger.error(f"Error in prompt_phone_share: {e}")
+        # Fallback: send simple message
+        fallback_message = "✅ Registration complete! Please share your phone number."
+        if update.effective_message:
+            await update.effective_message.reply_text(fallback_message)
+        else:
+            await update.effective_chat.send_message(fallback_message)
 
 # ---------------------------
 # /start command
