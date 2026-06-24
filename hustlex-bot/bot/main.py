@@ -856,21 +856,33 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     elif action == 'profile':
-        job_id = get_pending_job_id(context)
-        profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={job_id}"
-        keyboard = [[InlineKeyboardButton("👤 Open Profile", web_app=WebAppInfo(url=profile_url))]]
+        profile = get_user_profile(user_id)
+        if profile and profile.get('name'):
+            pov = "Not set"
+            profile_text = (
+                f"👤 *Your Freelancer Profile*\n\n"
+                f"📛 *Name:* {profile.get('name', pov)}\n"
+                f"🎂 *Age:* {profile.get('age', pov)}\n"
+                f"⚧ *Gender:* {profile.get('sex', pov)}\n"
+                f"📞 *Phone:* {profile.get('phone') or profile.get('phone_number', pov)}\n"
+            )
+            cv_filename = profile.get('cv_filename')
+            if cv_filename:
+                profile_text += f"📎 *CV:* {cv_filename}\n"
+            profile_text += "\nTap below to edit your profile."
+            profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup"
+            keyboard = [[InlineKeyboardButton("✏️ Edit Profile", web_app=WebAppInfo(url=profile_url))]]
+        else:
+            profile_text = (
+                "👤 *Profile Not Found*\n\n"
+                "You haven't set up your freelancer profile yet.\n\n"
+                "Create your profile to get hired faster! Include your skills, "
+                "experience, and CV to stand out to employers."
+            )
+            profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup"
+            keyboard = [[InlineKeyboardButton("🚀 Create Profile", web_app=WebAppInfo(url=profile_url))]]
         await update.effective_message.reply_text(
-            "👤 *Your Profile Arsenal*\n\n"
-            "Your profile is your **digital throne** — the kingdom where clients discover your genius. "
-            "It's not just a page; it's your **24/7 sales machine**, your **silent pitch**, and the "
-            "difference between \"maybe\" and \"hired.\"\n\n"
-            "A complete profile = **3× more invites**, **5× more trust**, and clients fighting to work with you.\n\n"
-            "What awaits you inside:\n"
-            "• 🎯 **Battle Station** — Showcase skills that slay\n"
-            "• 🌟 **Epic Portfolio** — Let your work do the talkin'\n"
-            "• 📊 **Verified Badges** — Flex your credibility\n"
-            "• 🚀 **Instant Apply** — One tap to your next gig\n\n"
-            "This isn't just a profile — it's your **legacy in the making** 👑",
+            profile_text,
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
