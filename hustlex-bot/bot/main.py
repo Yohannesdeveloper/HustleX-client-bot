@@ -898,10 +898,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == 'account_view_profile':
         user = update.effective_user
         profile = get_user_profile(user.id)
-        name = profile.get('name') if profile else None
-        age = profile.get('age') if profile else None
-        sex = profile.get('sex') if profile else None
-        phone = profile.get('phone') or profile.get('phone_number') if profile else None
+        if profile:
+            name = profile.get('name')
+            age = profile.get('age')
+            sex = profile.get('sex')
+            phone = profile.get('phone') or profile.get('phone_number')
+        else:
+            name = age = sex = phone = None
         text = (
             f"👤 *Your Profile*\n\n"
             f"*Personal Info:*\n"
@@ -914,7 +917,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Your profile is your **digital handshake** — keep it fresh, keep it real, "
             f"and let clients know exactly who's about to change their world. 🚀"
         )
-        keyboard = [[KeyboardButton("⬅️ Back to Account Settings")]]
+        keyboard = [[KeyboardButton("⬅️ Back to Settings")]]
         await update.effective_message.reply_text(
             text,
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
@@ -1192,10 +1195,13 @@ async def settings_languages_cb(update: Update, context: ContextTypes.DEFAULT_TY
 async def settings_account_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     profile = get_user_profile(user.id)
-    name = profile.get('name') if profile else None
-    age = profile.get('age') if profile else None
-    sex = profile.get('sex') if profile else None
-    phone = profile.get('phone') or profile.get('phone_number') if profile else None
+    if profile:
+        name = profile.get('name')
+        age = profile.get('age')
+        sex = profile.get('sex')
+        phone = profile.get('phone') or profile.get('phone_number')
+    else:
+        name = age = sex = phone = None
     account_text = (
         f"👤 *Account Settings*\n\n"
         f"*Personal Info:*\n"
