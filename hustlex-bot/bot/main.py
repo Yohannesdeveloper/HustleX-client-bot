@@ -2677,7 +2677,38 @@ def main():
     # Contact handler for phone number sharing
     app.add_handler(MessageHandler(filters.CONTACT, handle_contact))
 
-    # Job Posting ConversationHandler
+    # CallbackQuery handlers — MUST be BEFORE ConversationHandler
+    # because ConversationHandler's MessageHandler states consume callback updates
+    app.add_handler(CallbackQueryHandler(menu_callback, pattern="^menu$"))
+    app.add_handler(CallbackQueryHandler(applications_cb, pattern="^applications$"))
+    app.add_handler(CallbackQueryHandler(about_cb, pattern="^about$"))
+    app.add_handler(CallbackQueryHandler(settings_cb, pattern="^settings$"))
+
+    # Settings tab handlers
+    app.add_handler(CallbackQueryHandler(settings_languages_cb, pattern="^settings_languages$"))
+    app.add_handler(CallbackQueryHandler(settings_account_cb, pattern="^settings_account$"))
+    app.add_handler(CallbackQueryHandler(settings_cv_cb, pattern="^settings_cv$"))
+    app.add_handler(CallbackQueryHandler(settings_terms_cb, pattern="^settings_terms$"))
+
+    # Language selection handlers
+    app.add_handler(CallbackQueryHandler(language_selection, pattern="^lang_"))
+
+    # CV action handlers
+    app.add_handler(CallbackQueryHandler(cv_upload_handler, pattern="^cv_upload$"))
+    app.add_handler(CallbackQueryHandler(cv_view_handler, pattern="^cv_view$"))
+    app.add_handler(CallbackQueryHandler(cv_remove_handler, pattern="^cv_remove$"))
+
+    # Account management handlers
+    app.add_handler(CallbackQueryHandler(account_edit_profile_handler, pattern="^account_edit_profile$"))
+    app.add_handler(CallbackQueryHandler(account_notifications_handler, pattern="^account_notifications$"))
+    app.add_handler(CallbackQueryHandler(account_delete_handler, pattern="^account_delete$"))
+    app.add_handler(CallbackQueryHandler(privacy_policy_handler, pattern="^terms_privacy$"))
+
+    # Notification toggles
+    app.add_handler(CallbackQueryHandler(toggle_notification_handler, pattern="^toggle_"))
+    app.add_handler(CallbackQueryHandler(confirm_delete_account_handler, pattern="^confirm_delete_account$"))
+
+    # Job Posting ConversationHandler — AFTER all CallbackQueryHandlers
     job_post_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(post_job_start, pattern="^post_job_telegram$"),
                       CommandHandler("postjob", post_job_start),
@@ -2700,50 +2731,13 @@ def main():
     )
     app.add_handler(job_post_conv)
 
-    # CallbackQuery handlers
-    app.add_handler(CallbackQueryHandler(menu_callback, pattern="^menu$"))
-    app.add_handler(CallbackQueryHandler(applications_cb, pattern="^applications$"))
-    app.add_handler(CallbackQueryHandler(about_cb, pattern="^about$"))
-    app.add_handler(CallbackQueryHandler(settings_cb, pattern="^settings$"))
-    
-    # Settings tab handlers
-    app.add_handler(CallbackQueryHandler(settings_languages_cb, pattern="^settings_languages$"))
-    app.add_handler(CallbackQueryHandler(settings_account_cb, pattern="^settings_account$"))
-    app.add_handler(CallbackQueryHandler(settings_cv_cb, pattern="^settings_cv$"))
-    app.add_handler(CallbackQueryHandler(settings_terms_cb, pattern="^settings_terms$"))
-    
-    # Language selection handlers
-    app.add_handler(CallbackQueryHandler(language_selection, pattern="^lang_"))
-    
-    # CV action handlers
-    app.add_handler(CallbackQueryHandler(cv_upload_handler, pattern="^cv_upload$"))
-    app.add_handler(CallbackQueryHandler(cv_view_handler, pattern="^cv_view$"))
-    app.add_handler(CallbackQueryHandler(cv_remove_handler, pattern="^cv_remove$"))
-    
-    # Account management handlers
-    app.add_handler(CallbackQueryHandler(account_edit_profile_handler, pattern="^account_edit_profile$"))
-    app.add_handler(CallbackQueryHandler(account_notifications_handler, pattern="^account_notifications$"))
-    app.add_handler(CallbackQueryHandler(account_delete_handler, pattern="^account_delete$"))
-    app.add_handler(CallbackQueryHandler(privacy_policy_handler, pattern="^terms_privacy$"))
-    
-    # Notification toggles
-    app.add_handler(CallbackQueryHandler(toggle_notification_handler, pattern="^toggle_"))
-    app.add_handler(CallbackQueryHandler(confirm_delete_account_handler, pattern="^confirm_delete_account$"))
-
-    # Catch-all debug handler for unhandled callbacks
-    async def debug_unhandled_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        q = update.callback_query
-        await q.answer(text=f"⚠️ Debug: unhandled callback_data='{q.data}'", show_alert=True)
-
-    app.add_handler(CallbackQueryHandler(debug_unhandled_callback))
-
     # File/message handlers
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_handler))
-    
+
     # Web app data handler
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
-    
-    # Text menu handler
+
+    # Text menu handler — must be last
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     # Run bot
