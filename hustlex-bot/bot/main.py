@@ -764,21 +764,25 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == 'profile':
         job_id = get_pending_job_id(context)
         profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={job_id}"
-        keyboard = [
-            [InlineKeyboardButton("👤 Open Profile", url=profile_url)],
-            [InlineKeyboardButton("⬅️ Back to Menu", callback_data="menu")]
-        ]
+        keyboard = [[InlineKeyboardButton("👤 Open Profile", url=profile_url)]]
         await update.effective_message.reply_text(
-            "👤 *Profile*\n\nClick below to open your profile setup:",
+            "👤 *Your Profile Arsenal*\n\n"
+            "Your profile is your **digital throne** — the kingdom where clients discover your genius. "
+            "It's not just a page; it's your **24/7 sales machine**, your **silent pitch**, and the "
+            "difference between \"maybe\" and \"hired.\"\n\n"
+            "A complete profile = **3× more invites**, **5× more trust**, and clients fighting to work with you.\n\n"
+            "What awaits you inside:\n"
+            "• 🎯 **Battle Station** — Showcase skills that slay\n"
+            "• 🌟 **Epic Portfolio** — Let your work do the talkin'\n"
+            "• 📊 **Verified Badges** — Flex your credibility\n"
+            "• 🚀 **Instant Apply** — One tap to your next gig\n\n"
+            "This isn't just a profile — it's your **legacy in the making** 👑",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
     elif action == 'applications':
         applications_url = "https://hustlexet.vercel.app/my-applications"
-        keyboard = [
-            [InlineKeyboardButton("📋 Open Applications", url=applications_url)],
-            [InlineKeyboardButton("⬅️ Back to Menu", callback_data="menu")]
-        ]
+        keyboard = [[InlineKeyboardButton("📋 Open Applications", url=applications_url)]]
         await update.effective_message.reply_text(
             "📋 *Applications*\n\nClick below to view your applications:",
             reply_markup=InlineKeyboardMarkup(keyboard),
