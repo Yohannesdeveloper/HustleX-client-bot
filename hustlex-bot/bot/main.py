@@ -908,14 +908,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = (
             f"👤 *Your Profile*\n\n"
             f"*Personal Info:*\n"
-            f"• **Name:** {name or user.first_name or 'Not set'}\n"
-            f"• **Age:** {age or 'Not set'}\n"
-            f"• **Gender:** {sex or 'Not set'}\n"
-            f"• **Phone:** {phone or 'Not set'}\n"
-            f"• **Username:** @{user.username or 'Not set'}\n"
-            f"• **User ID:** `{user.id}`\n\n"
-            f"Your profile is your **digital handshake** — keep it fresh, keep it real, "
+            f"• *Name:* {name or user.first_name or 'Not set'}\n"
+            f"• *Age:* {age or 'Not set'}\n"
+            f"• *Gender:* {sex or 'Not set'}\n"
+            f"• *Phone:* {phone or 'Not set'}\n"
+            f"• *Username:* @{user.username or 'Not set'}\n"
+            f"• *User ID:* {user.id}\n\n"
+            f"Your profile is your digital handshake — keep it fresh, keep it real, "
             f"and let clients know exactly who's about to change their world. 🚀"
+        )
+        keyboard = [[KeyboardButton("⬅️ Back to Settings")]]
+        await update.effective_message.reply_text(
+            text,
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+            parse_mode="Markdown"
         )
         keyboard = [[KeyboardButton("⬅️ Back to Settings")]]
         await update.effective_message.reply_text(
@@ -1205,13 +1211,13 @@ async def settings_account_cb(update: Update, context: ContextTypes.DEFAULT_TYPE
     account_text = (
         f"👤 *Account Settings*\n\n"
         f"*Personal Info:*\n"
-        f"• **Name:** {name or user.first_name or 'Not set'}\n"
-        f"• **Age:** {age or 'Not set'}\n"
-        f"• **Gender:** {sex or 'Not set'}\n"
-        f"• **Phone:** {phone or 'Not set'}\n"
-        f"• **Username:** @{user.username or 'Not set'}\n"
-        f"• **User ID:** `{user.id}`\n\n"
-        f"*⚙️ Manage your account below:*"
+        f"• *Name:* {name or user.first_name or 'Not set'}\n"
+        f"• *Age:* {age or 'Not set'}\n"
+        f"• *Gender:* {sex or 'Not set'}\n"
+        f"• *Phone:* {phone or 'Not set'}\n"
+        f"• *Username:* @{user.username or 'Not set'}\n"
+        f"• *User ID:* {user.id}\n\n"
+        f"⚙️ Manage your account below:"
     )
     keyboard = [
         [KeyboardButton("👤 View Profile"), KeyboardButton("🔔 Notifications")],
