@@ -63,6 +63,12 @@ def extract_user_id(init_data_str: str) -> Optional[int]:
         except Exception:
             return None
 
+def init_data_to_user_id(init_data_str: str, bot_token: str) -> Optional[int]:
+    """Verify init_data and return user_id, or None if invalid."""
+    if not verify_init_data(init_data_str, bot_token):
+        return None
+    return extract_user_id(init_data_str)
+
 def verify_init_data(init_data_str: str, bot_token: str) -> bool:
     if not bot_token or not init_data_str:
         return False
@@ -95,6 +101,88 @@ async def send_telegram_message(chat_id: int, text: str, reply_markup: dict = No
         print(f"Error sending Telegram message to {chat_id}: {e}")
         return False
 
+CHANNEL_ID = os.getenv("CHANNEL_ID", "-1003194542999")
+
+async def send_channel_announcement(username: str = ""):
+    """Post a registration announcement to @HustleXeth."""
+    if not BOT_TOKEN or not CHANNEL_ID:
+        return False
+    contact = f"@{username}" if username else "A new user"
+    text = (
+        f"🎉 New Freelancer Registered!\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"👤 {contact} has joined HustleX!\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"HustleX — Elite Freelancers Worldwide\n"
+        f"@HustleXet_bot"
+    )
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, json={"chat_id": CHANNEL_ID, "text": text})
+            return resp.json().get("ok", False)
+    except Exception:
+        return False
+
+
+async def post_profile_card_to_channel(user_id: int, name: str, age: int, sex: str, username: str = ""):
+    """Post a freelancer profile card to the @HustleXeth channel."""
+    if not BOT_TOKEN or not CHANNEL_ID:
+        print("[WARN] BOT_TOKEN or CHANNEL_ID not set, cannot post profile card to channel")
+        return False
+    contact = f"@{username}" if username else "N/A"
+    age_display = age if age and age > 0 else "N/A"
+    profile_card = (
+        f"🆕 New Freelancer Profile!\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"👤 Name: {name}\n"
+        f"🎂 Age: {age_display}\n"
+        f"⚧ Gender: {sex}\n"
+        f"📱 Contact: {contact}\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"HustleX — Elite Freelancers Worldwide\n"
+        f"@HustleXet_bot"
+    )
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": CHANNEL_ID, "text": profile_card}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, json=payload)
+            data = resp.json()
+            if data.get("ok"):
+                print(f"Profile card posted to channel for user {user_id}")
+                return True
+            print(f"Failed to post profile card: {data.get('description')}")
+            return False
+    except Exception as e:
+        print(f"Error posting profile card to channel: {e}")
+        return False
+
+@app.get("/api/profile")
+async def get_profile(init_data: str = ""):
+    """Fetch existing profile data for the authenticated user."""
+    if not init_data:
+        raise HTTPException(status_code=401, detail="Missing initData")
+    if not BOT_TOKEN:
+        raise HTTPException(status_code=500, detail="BOT_TOKEN not set")
+    user_id = init_data_to_user_id(init_data, BOT_TOKEN)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid initData")
+    database = get_db()
+    if not database:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
+    try:
+        profile = database.profiles.find_one({"user_id": user_id}, {"_id": 0, "cv_file_data": 0})
+        if not profile:
+            return {"has_profile": False, "user_id": user_id}
+        profile["has_profile"] = True
+        profile["user_id"] = profile.get("user_id", user_id)
+        for field in ("cv_file_data",):
+            profile.pop(field, None)
+        return profile
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
 @app.post("/api/profile")
 async def save_profile(
     request: Request,
@@ -114,6 +202,16 @@ async def save_profile(
     user_id = extract_user_id(init_data)
     if not user_id:
         raise HTTPException(status_code=400, detail="Missing user ID in initData")
+
+    tg_username = ""
+    try:
+        params = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
+        user_str = params.get("user", "")
+        if user_str:
+            user_data = json.loads(user_str)
+            tg_username = user_data.get("username", "")
+    except Exception:
+        pass
 
     profile_data = {"name": name, "age": age, "sex": sex, "profile_setup_complete": True}
     if contact_info:
@@ -148,13 +246,28 @@ async def save_profile(
             {"$set": {**profile_data, "updated_at": datetime.utcnow()}},
             upsert=True,
         )
+        reg_data = {"user_id": user_id, "registered_at": datetime.utcnow()}
+        if tg_username:
+            reg_data["username"] = tg_username
         database.registered_users.update_one(
             {"user_id": user_id},
-            {"$set": {"user_id": user_id, "registered_at": datetime.utcnow()}},
+            {"$set": reg_data},
             upsert=True,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    if not tg_username:
+        registered = database.registered_users.find_one({"user_id": user_id})
+        if registered:
+            tg_username = registered.get("username", "")
+    await post_profile_card_to_channel(
+        user_id=user_id,
+        name=name,
+        age=age,
+        sex=sex,
+        username=tg_username,
+    )
 
     return {"status": "success", "message": "Profile saved successfully"}
 
@@ -170,6 +283,16 @@ async def register_user_endpoint(payload: RegisterRequest):
     user_id = extract_user_id(payload.init_data)
     if not user_id:
         raise HTTPException(status_code=400, detail="Missing user ID in initData")
+
+    tg_username = ""
+    try:
+        params = dict(urllib.parse.parse_qsl(payload.init_data, keep_blank_values=True))
+        user_str = params.get("user", "")
+        if user_str:
+            user_data = json.loads(user_str)
+            tg_username = user_data.get("username", "")
+    except Exception:
+        pass
 
     profile_data = {
         "name": f"{payload.first_name} {payload.last_name}".strip(),
@@ -193,20 +316,23 @@ async def register_user_endpoint(payload: RegisterRequest):
             {"$set": profile_data},
             upsert=True,
         )
+        registered_data = {
+            "user_id": user_id,
+            "first_name": payload.first_name,
+            "last_name": payload.last_name,
+            "registered_at": datetime.utcnow(),
+        }
+        if tg_username:
+            registered_data["username"] = tg_username
         database.registered_users.update_one(
             {"user_id": user_id},
-            {
-                "$set": {
-                    "user_id": user_id,
-                    "first_name": payload.first_name,
-                    "last_name": payload.last_name,
-                    "registered_at": datetime.utcnow(),
-                }
-            },
+            {"$set": registered_data},
             upsert=True,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    await send_channel_announcement(tg_username)
 
     phone_keyboard = {
         "keyboard": [

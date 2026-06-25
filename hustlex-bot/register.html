@@ -417,6 +417,7 @@
           errorMsg.style.display = 'none';
         
           if (tg) {
+            tg.sendData(JSON.stringify({ action: 'register_complete' }));
             setTimeout(() => { tg.close(); }, 1200);
           } else {
             alert('Registration completed successfully! Check the bot for next steps.');

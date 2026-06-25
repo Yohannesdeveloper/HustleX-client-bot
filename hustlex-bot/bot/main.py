@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, BotCommand, MenuButtonCommands
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, ConversationHandler, ChatMemberHandler
 from telegram.error import TelegramError
 from urllib.parse import urlparse
 import aiohttp
@@ -194,6 +194,55 @@ def save_job_to_db(job_data: dict) -> str:
     database.jobs.insert_one(doc)
     return job_id
 
+async def post_profile_card_to_channel(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> bool:
+    """Post a freelancer profile card to @HustleXeth when profile is completed."""
+    CHANNEL_ID = os.getenv("CHANNEL_ID", "-1003194542999")
+    profile = get_user_profile(user_id)
+    if not profile:
+        logger.warning(f"No profile found for user {user_id}, skipping channel post")
+        return False
+
+    name = profile.get("name", "Not set")
+    raw_age = profile.get("age", None)
+    age = str(raw_age) if raw_age and int(raw_age) > 0 else "N/A"
+    sex = profile.get("sex", "N/A")
+    username = profile.get("username") or ""
+    contact = f"@{username}" if username else "N/A"
+
+    database = get_db()
+    user_info = None
+    if database:
+        user_info = database.registered_users.find_one({"user_id": user_id})
+    tg_username = ""
+    if user_info:
+        tg_username = user_info.get("username") or ""
+    if tg_username and not username:
+        contact = f"@{tg_username}"
+
+    profile_card = (
+        f"🆕 New Freelancer Profile!\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"👤 Name: {name}\n"
+        f"🎂 Age: {age}\n"
+        f"⚧ Gender: {sex}\n"
+        f"📱 Contact: {contact}\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"HustleX — Elite Freelancers Worldwide\n"
+        f"@HustleXet_bot"
+    )
+
+    try:
+        await context.bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=profile_card,
+        )
+        logger.info(f"Profile card posted to channel for user {user_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to post profile card to channel: {e}")
+        return False
+
+
 def delete_user(user_id: int) -> bool:
     """Delete all user data from MongoDB and in-memory storage."""
     database = get_db()
@@ -368,24 +417,17 @@ async def send_job_details(update: Update, context: ContextTypes.DEFAULT_TYPE, j
         await update.effective_chat.send_message(message)
 
 async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Route a registered user based on phone number existence."""
+    """Route a registered user directly to menu or job details."""
     user_id = update.effective_user.id
     registered_users.add(user_id)
     job_id = parse_job_id_from_start(context.args) or context.user_data.get("pending_job_id")
     if job_id:
         context.user_data["pending_job_id"] = job_id
 
-    # Check if user has phone number
-    if has_user_phone(user_id):
-        # Existing user with phone number - go directly to job details
-        if job_id:
-            await send_job_details(update, context, job_id)
-        else:
-            await menu_callback(update, context)
-        return
-
-    # No phone number - show phone sharing popup
-    await prompt_phone_share(update, context)
+    if job_id:
+        await send_job_details(update, context, job_id)
+    else:
+        await menu_callback(update, context)
 
 # ---------------------------
 # /register_complete command
@@ -407,6 +449,7 @@ async def register_complete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     registered_users.add(user_id)
+    await post_registration_to_channel(context, user_id, username or "")
     await prompt_phone_share(update, context)
 
 # ---------------------------
@@ -611,6 +654,7 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
 
                 if success:
                     registered_users.add(user_id)
+                    await post_registration_to_channel(context, user_id, username or "")
                     # Send phone sharing popup as a new message
                     lang_code = user_languages.get(user_id, 'en')
                     context.user_data['awaiting_phone'] = True
@@ -627,6 +671,7 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
             elif parsed_data.get('action') == 'profile_complete':
                 user_id = update.effective_user.id
                 job_id = parsed_data.get('job_id') or get_pending_job_id(context)
+                logger.info(f"Profile completed for user {user_id}")
                 await send_job_details(update, context, job_id)
         except json.JSONDecodeError:
             pass
@@ -2604,6 +2649,134 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 
+async def post_registration_to_channel(context: ContextTypes.DEFAULT_TYPE, user_id: int, username: str = "") -> bool:
+    """Post a registration announcement to @HustleXeth when a user registers in the bot."""
+    CHANNEL_ID = os.getenv("CHANNEL_ID", "-1003194542999")
+    contact = f"@{username}" if username else f"User {user_id}"
+    announcement = (
+        f"🎉 New Freelancer Registered!\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"👤 {contact} has joined HustleX!\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"HustleX — Elite Freelancers Worldwide\n"
+        f"@HustleXet_bot"
+    )
+    try:
+        await context.bot.send_message(chat_id=CHANNEL_ID, text=announcement)
+        logger.info(f"Registration announcement posted to channel for user {user_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to post registration announcement: {e}")
+        return False
+
+
+async def handle_channel_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """When a user joins @HustleXeth, auto-register them in the bot."""
+    CHANNEL_ID = os.getenv("CHANNEL_ID", "-1003194542999")
+    chat_member = update.chat_member
+    if not chat_member:
+        return
+    chat_id = str(chat_member.chat.id)
+    if chat_id != str(CHANNEL_ID) and chat_id != CHANNEL_ID:
+        return
+
+    old_status = chat_member.old_chat_member.status if chat_member.old_chat_member else None
+    new_status = chat_member.new_chat_member.status if chat_member.new_chat_member else None
+
+    if new_status == "member" and old_status in ("left", "kicked", None):
+        user = chat_member.new_chat_member.user
+        user_id = user.id
+        username = user.username or ""
+        first_name = user.first_name or ""
+
+        if is_user_registered(user_id):
+            logger.info(f"User {user_id} already registered, skipping channel join registration")
+            return
+
+        success = register_user(user_id, username, first_name)
+        if success:
+            logger.info(f"User {user_id} auto-registered from channel join")
+            await post_registration_to_channel(context, user_id, username)
+
+
+async def handle_channel_profile_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Monitor channel for profile card messages and sync back to MongoDB."""
+    CHANNEL_ID = os.getenv("CHANNEL_ID", "-1003194542999")
+    if not update.channel_post or not update.channel_post.text:
+        return
+
+    chat_id = str(update.channel_post.chat.id)
+    if chat_id != str(CHANNEL_ID) and chat_id != CHANNEL_ID:
+        return
+
+    text = update.channel_post.text
+
+    # Only process messages matching our profile card format
+    if not text.startswith("🆕 New Freelancer Profile!"):
+        return
+
+    try:
+        lines = text.strip().split("\n")
+        name = ""
+        age = ""
+        sex = ""
+        contact = ""
+
+        for line in lines:
+            line = line.strip()
+            if line.startswith("👤 Name:"):
+                name = line.replace("👤 Name:", "").strip()
+            elif line.startswith("🎂 Age:"):
+                age = line.replace("🎂 Age:", "").strip()
+            elif line.startswith("⚧ Gender:"):
+                sex = line.replace("⚧ Gender:", "").strip()
+            elif line.startswith("📱 Contact:"):
+                contact = line.replace("📱 Contact:", "").strip()
+
+        if not name or name == "Not set":
+            return
+
+        username = contact.lstrip("@") if contact != "N/A" else ""
+
+        if not username:
+            return
+
+        database = get_db()
+        if not database:
+            return
+
+        user_info = database.registered_users.find_one({"username": username})
+        if not user_info:
+            logger.info(f"No registered user found for @{username} from channel profile card")
+            return
+
+        user_id = user_info["user_id"]
+        existing = database.profiles.find_one({"user_id": user_id})
+        if not existing:
+            return
+
+        updates = {}
+        if name and name != "Not set":
+            updates["name"] = name
+        if age and age != "N/A":
+            try:
+                updates["age"] = int(age)
+            except ValueError:
+                pass
+        if sex and sex != "N/A":
+            updates["sex"] = sex
+
+        if updates:
+            updates["synced_from_channel_at"] = datetime.utcnow()
+            database.profiles.update_one(
+                {"user_id": user_id},
+                {"$set": updates},
+            )
+            logger.info(f"Profile synced from channel for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error processing channel profile message: {e}")
+
+
 def main():
     async def post_init(application):
         await application.bot.set_my_commands([
@@ -2656,6 +2829,11 @@ def main():
     app.add_handler(CallbackQueryHandler(account_edit_profile_handler, pattern="^account_edit_profile$"))
     app.add_handler(CallbackQueryHandler(privacy_policy_handler, pattern="^terms_privacy$"))
 
+    # Channel member update handler (auto-register when user joins @HustleXeth)
+    app.add_handler(ChatMemberHandler(
+        handle_channel_member_update, chat_member_types=ChatMemberHandler.CHAT_MEMBER
+    ))
+
     # Job Posting ConversationHandler — AFTER all CallbackQueryHandlers
     job_post_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(post_job_start, pattern="^post_job_telegram$"),
@@ -2687,6 +2865,12 @@ def main():
 
     # Text menu handler — must be last
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+    # Channel message handler (profile card sync) — runs after everything else
+    app.add_handler(MessageHandler(
+        filters.Chat(chat_id=os.getenv("CHANNEL_ID", "-1003194542999")) & filters.TEXT,
+        handle_channel_profile_message,
+    ), group=1)
 
     # Run bot
     app.run_polling()
