@@ -389,6 +389,15 @@ async def get_job(job_id: str):
         "job_link": job.get("job_link", ""),
     })
 
+@app.get("/api/user/status")
+async def check_user_registration(user_id: int):
+    """Check if a user is registered. Used by the bot as a fallback."""
+    database = get_db()
+    if not database:
+        return {"registered": False, "error": "DB unavailable"}
+    user = database.registered_users.find_one({"user_id": user_id})
+    return {"registered": user is not None}
+
 @app.get("/Register", response_class=HTMLResponse)
 @app.get("/register", response_class=HTMLResponse)
 async def serve_register_page():

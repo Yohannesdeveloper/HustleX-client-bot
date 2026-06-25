@@ -61,12 +61,30 @@ def is_user_registered(user_id: int) -> bool:
     """Check if user completed registration in MongoDB."""
     database = get_db()
     if database is None:
+        logger.warning(f"is_user_registered({user_id}): get_db() returned None")
         return False
     try:
-        return database.registered_users.find_one({"user_id": user_id}) is not None
-    except Exception as e:
-        logger.error(f"Error checking user registration: {e}")
+        user = database.registered_users.find_one({"user_id": user_id})
+        if user is not None:
+            return True
+        logger.info(f"is_user_registered({user_id}): not found in MongoDB")
         return False
+    except Exception as e:
+        logger.error(f"Error checking user registration for {user_id}: {e}")
+        return False
+
+async def check_registration_via_api(user_id: int) -> bool:
+    """Fallback: check registration via the API (Vercel) when direct MongoDB check fails."""
+    url = f"{WEBAPP_URL.rstrip('/')}/api/user/status?user_id={user_id}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=5) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("registered", False)
+    except Exception as e:
+        logger.error(f"API registration check failed for {user_id}: {e}")
+    return False
 
 def get_user_profile(user_id: int):
     database = get_db()
@@ -469,6 +487,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["pending_job_id"] = job_id
 
     if is_user_registered(user_id):
+        registered_users.add(user_id)
+        await route_registered_user(update, context)
+        return
+
+    # Fallback: check via API when MongoDB direct check fails
+    if await check_registration_via_api(user_id):
+        logger.info(f"User {user_id} confirmed registered via API fallback")
+        registered_users.add(user_id)
+        register_user(user_id, update.effective_user.username, update.effective_user.first_name)
         await route_registered_user(update, context)
         return
 
