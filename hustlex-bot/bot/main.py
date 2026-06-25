@@ -669,22 +669,24 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 user_id = update.effective_user.id
                 username = update.effective_user.username
                 first_name = update.effective_user.first_name
-                registered_users.add(user_id)
-                register_user(user_id, username, first_name)
-                await post_registration_to_channel(context, user_id, username or "")
-                # Send phone sharing popup as a new message
-                lang_code = user_languages.get(user_id, 'en')
-                context.user_data['awaiting_phone'] = True
-                phone_messages = {
-                    'en': "✅ Registration complete! 🎉\n\nPlease share your phone number so clients can reach you, or tap Cancel to skip.",
-                }
-                message = phone_messages.get(lang_code, phone_messages['en'])
-                keyboard = [
-                    [KeyboardButton("📱 Share Phone Number", request_contact=True)],
-                    [KeyboardButton("❌ Cancel")],
-                ]
-                reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-                await update.effective_chat.send_message(message, reply_markup=reply_markup)
+                success = register_user(user_id, username, first_name)
+
+                if success:
+                    registered_users.add(user_id)
+                    await post_registration_to_channel(context, user_id, username or "")
+                    # Send phone sharing popup as a new message
+                    lang_code = user_languages.get(user_id, 'en')
+                    context.user_data['awaiting_phone'] = True
+                    phone_messages = {
+                        'en': "✅ Registration complete! 🎉\n\nPlease share your phone number so clients can reach you, or tap Cancel to skip.",
+                    }
+                    message = phone_messages.get(lang_code, phone_messages['en'])
+                    keyboard = [
+                        [KeyboardButton("📱 Share Phone Number", request_contact=True)],
+                        [KeyboardButton("❌ Cancel")],
+                    ]
+                    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+                    await update.effective_chat.send_message(message, reply_markup=reply_markup)
             elif parsed_data.get('action') == 'profile_complete':
                 user_id = update.effective_user.id
                 job_id = parsed_data.get('job_id') or get_pending_job_id(context)
