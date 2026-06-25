@@ -376,10 +376,12 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
 
 async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
+    # Check in-memory set first (fastest, survives message interception)
+    if user_id in registered_users:
+        return True
     if is_user_registered(user_id):
         registered_users.add(user_id)
         return True
-    # Fallback: check via API when MongoDB check fails
     if await check_registration_via_api(user_id):
         logger.info(f"User {user_id} confirmed registered via API fallback")
         registered_users.add(user_id)
@@ -703,6 +705,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang_code = user_languages.get(user_id, 'en')
     text = update.effective_message.text.strip()
+
+    # Intercept API's "Registration Successful" message and register user in-memory
+    if "Registration Successful" in text:
+        registered_users.add(user_id)
+        register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        return
 
     if text == "❌ Cancel" and (
         context.user_data.get("awaiting_phone")
