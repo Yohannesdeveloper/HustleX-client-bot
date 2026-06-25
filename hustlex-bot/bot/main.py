@@ -915,7 +915,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if action is None:
         return
 
-    if action in protected_actions and not is_user_registered(user_id):
+    if action in protected_actions and user_id not in registered_users and not is_user_registered(user_id):
         await show_registration_prompt(update, context)
         return
     
