@@ -455,6 +455,34 @@ async def save_freelancer_profile(request: Request):
     else:
         print(f"Telegram message FAILED for user {user_id} — the bot will still auto-send via callback poller")
 
+    # Send main menu automatically with keyboard
+    menu_text_html = (
+        "🌐 https://hustlexet.vercel.app/\n\n"
+        "🔥 <b>Welcome to the Arena, Champion!</b> 🔥\n\n"
+        "You're now in the <b>HustleX command center</b> — where freelancers become legends "
+        "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
+        "<b>⚔️ Your Arsenal:</b>\n"
+        "📋 Applications — Track your conquests, seal the deals\n"
+        "👤 Profile — Your digital throne, flex your empire\n"
+        "⚙️ Settings — Calibrate your battlefield\n"
+        "ℹ️ About HustleX — Know the kingdom you're building in\n\n"
+        "Let's make moves. 🚀\n\n"
+        "HustleX (https://hustlexet.vercel.app/)\n"
+        "HustleX — Hire Elite Freelancers Worldwide\n"
+        "Connect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence."
+    )
+    await send_telegram_message(
+        chat_id=user_id,
+        text=menu_text_html,
+        reply_markup={
+            "keyboard": [
+                [{"text": "📋 Applications"}, {"text": "👤 Profile"}],
+                [{"text": "⚙️ Settings"}, {"text": "ℹ️ About"}]
+            ],
+            "resize_keyboard": True
+        }
+    )
+
     return {"status": "success", "message": "Profile created"}
 
 @app.get("/api/freelancer-profile")
