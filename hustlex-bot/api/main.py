@@ -600,8 +600,13 @@ async def check_user_registration(user_id: int):
     database = get_db()
     if database is None:
         return {"registered": False, "error": "DB unavailable"}
-    user = database.registered_users.find_one({"user_id": user_id})
-    return {"registered": user is not None}
+    if database.registered_users.find_one({"user_id": user_id}):
+        return {"registered": True}
+    if database.profiles.find_one({"user_id": user_id}):
+        return {"registered": True}
+    if database.freelancer_profiles.find_one({"user_id": user_id}):
+        return {"registered": True}
+    return {"registered": False}
 
 @app.get("/Register", response_class=HTMLResponse)
 @app.get("/register", response_class=HTMLResponse)

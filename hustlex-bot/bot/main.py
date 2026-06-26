@@ -386,16 +386,18 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
 
 async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
-    # Check in-memory set first (fastest, survives message interception)
+    # Check in-memory set first (fastest)
     if user_id in registered_users:
         return True
-    if is_user_registered(user_id):
-        registered_users.add(user_id)
-        return True
+    # Check via API (most reliable — same MongoDB as registration endpoint)
     if await check_registration_via_api(user_id):
-        logger.info(f"User {user_id} confirmed registered via API fallback")
+        logger.info(f"User {user_id} confirmed registered via API")
         registered_users.add(user_id)
         register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        return True
+    # Fallback: direct MongoDB check
+    if is_user_registered(user_id):
+        registered_users.add(user_id)
         return True
     await show_registration_prompt(update, context)
     return False
