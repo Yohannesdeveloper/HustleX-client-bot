@@ -646,9 +646,6 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
 # Menu callback
 # ---------------------------
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await require_registration(update, context):
-        return
-
     user_id = update.effective_user.id
     first_name = update.effective_user.first_name or ""
     profile_just_completed = context.user_data.pop('_profile_just_completed', False)
