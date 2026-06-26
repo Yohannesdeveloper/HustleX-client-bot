@@ -541,20 +541,18 @@ async def register_user_endpoint(payload: RegisterRequest):
 
     await send_channel_announcement(tg_username)
 
-    phone_keyboard = {
+    menu_keyboard = {
         "keyboard": [
-            [{"text": "📱 Share Phone Number", "request_contact": True}],
-            [{"text": "❌ Cancel"}],
+            [{"text": "ℹ️ About HustleX"}, {"text": "👤 Profile"}],
+            [{"text": "📋 Applications"}, {"text": "⚙️ Settings"}],
         ],
         "resize_keyboard": True,
-        "one_time_keyboard": True,
     }
     success_text = (
-        "✅ <b>Registration Successful!</b>\n\n"
-        f"Welcome, <b>{payload.first_name}</b>! 🎉\n\n"
-        "Next, share your phone number (Share or Cancel), then complete your freelancer profile."
+        "✅ Registration complete! Welcome to HustleX 🎉\n\n"
+        "Choose an option below:"
     )
-    await send_telegram_message(user_id, success_text, phone_keyboard)
+    await send_telegram_message(user_id, success_text, menu_keyboard)
 
     return {"status": "success", "message": "Registration complete!"}
 

@@ -488,7 +488,8 @@ async def register_complete(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     registered_users.add(user_id)
     await post_registration_to_channel(context, user_id, username or "")
-    await prompt_phone_share(update, context)
+    chat_id = update.effective_chat.id if update.effective_chat else user_id
+    await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
 
 # ---------------------------
 # /start command
@@ -788,11 +789,8 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 registered_users.add(user_id)
                 register_user(user_id, username, first_name)
                 await post_registration_to_channel(context, user_id, username or "")
-                context.user_data['awaiting_phone'] = True
-                await update.effective_chat.send_message(
-                    f"✅ *Registration Successful!* 🎉\n\nWelcome, *{first_name}*!\n\n"
-                    "Please share your phone number using the button below so clients can reach you."
-                )
+                chat_id = update.effective_chat.id if update.effective_chat else user_id
+                await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
             elif parsed_data.get('action') == 'profile_complete':
                 user_id = update.effective_user.id
                 logger.info(f"Profile completed for user {user_id}")
