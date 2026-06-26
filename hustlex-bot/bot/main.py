@@ -1043,8 +1043,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if action in protected_actions and user_id not in registered_users and not is_user_registered(user_id):
-        await show_registration_prompt(update, context)
-        return
+        # Last try: check via API before showing registration prompt
+        if not await check_registration_via_api(user_id):
+            await show_registration_prompt(update, context)
+            return
+        logger.info(f"User {user_id} confirmed via API in handle_text")
+        registered_users.add(user_id)
+        register_user(user_id, update.effective_user.username, update.effective_user.first_name)
     
     if action == 'menu':
         await menu_callback(update, context)
