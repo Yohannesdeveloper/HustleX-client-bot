@@ -499,10 +499,15 @@ async def get_freelancer_profile(init_data: str = ""):
         raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
         profile = database.freelancer_profiles.find_one({"user_id": user_id}, {"_id": 0})
-        if not profile:
-            return {"has_profile": False, "user_id": user_id}
-        profile["has_profile"] = True
-        return profile
+        if profile:
+            profile["has_profile"] = True
+            return profile
+        # Fallback: check profiles collection (legacy Register page)
+        legacy = database.profiles.find_one({"user_id": user_id}, {"_id": 0})
+        if legacy:
+            legacy["has_profile"] = True
+            return legacy
+        return {"has_profile": False, "user_id": user_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
