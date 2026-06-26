@@ -496,13 +496,40 @@
     const formContainer = document.getElementById('formContainer');
     const successScreen = document.getElementById('successScreen');
 
+    function validateForm() {
+      const fullName = form.querySelector('[name="full_name"]').value.trim();
+      if (!fullName) return 'Full Name is required.';
+
+      const headline = form.querySelector('[name="headline"]').value.trim();
+      if (!headline) return 'Headline is required.';
+
+      const primarySkills = form.querySelector('[name="primary_skills"]').value.trim();
+      if (!primarySkills) return 'At least one primary skill is required.';
+
+      const email = form.querySelector('[name="email"]').value.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Please enter a valid email address.';
+
+      const phone = form.querySelector('[name="phone"]').value.trim();
+      if (phone && !/^[\d\s\+\-\(\)]{7,20}$/.test(phone)) return 'Please enter a valid phone number.';
+
+      return null;
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorMsg.style.display = 'none';
+
+      const validationError = validateForm();
+      if (validationError) {
+        errorMsg.textContent = `❌ ${validationError}`;
+        errorMsg.style.display = 'block';
+        return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = 'Publishing...';
 
-      // Count dynamic entries
+      // Re-index dynamic entries so their names are sequential
       document.querySelectorAll('#experienceContainer .entry-group').forEach((el, i) => {
         el.querySelector('input[name^="exp_title_"]').name = `exp_title_${i}`;
         el.querySelector('input[name^="exp_company_"]').name = `exp_company_${i}`;
@@ -527,7 +554,6 @@
         el.querySelector('input[name^="cert_url_"]').name = `cert_url_${i}`;
       });
 
-      // Set counts
       const formData = new FormData(form);
       formData.set('exp_count', document.querySelectorAll('#experienceContainer .entry-group').length);
       formData.set('edu_count', document.querySelectorAll('#educationContainer .entry-group').length);
@@ -547,10 +573,9 @@
         if (response.ok) {
           formContainer.style.display = 'none';
           successScreen.style.display = 'block';
-
-          // Backend will handle notifying the bot — just close after a moment
+          // Wait for Telegram message confirmation, then close
           if (tg) {
-            setTimeout(() => { tg.close(); }, 2000);
+            setTimeout(() => { tg.close(); }, 3000);
           }
         } else {
           const detail = data.detail;
