@@ -636,22 +636,21 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-    name = user_first_name or "there"
-    menu_text = (
-        "🌟 *Welcome to HustleX!* 🌟\n\n"
-        f"Hello {name}! 👋\n\n"
-        "I'm your HustleX assistant. Here's what I can do:\n\n"
-        f"📋 {messages['applications']} — Manage your job applications\n"
-        f"👤 {messages['profile']} — Manage your freelancer profile\n"
-        f"⚙️ {messages['settings']} — Configure your preferences\n"
-        f"ℹ️ {messages['about']} — Learn about HustleX\n\n"
-        "Available commands:\n"
-        "/start — Show this welcome message\n"
-        "/help — Show help information\n"
-        "/profile — View your profile status\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━\n"
-        "💼 HustleX — Connecting Talent with Opportunity"
-    )
+    menu_text = ""
+    if profile_just_completed:
+        menu_text += "✅ *Profile Created Successfully!* 🎉\n"
+        menu_text += "Your freelancer profile is now live. Clients can discover your skills and invite you to projects.\n\n---\n\n"
+    menu_text += f"{messages['title']}\n\n"
+    menu_text += "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
+    menu_text += "You're now in the *HustleX command center* — where freelancers become legends "\
+                 "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
+    menu_text += "*⚔️ Your Arsenal:*\n"
+    menu_text += f"📋 {messages['applications']} — Track your conquests, seal the deals\n"
+    menu_text += f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
+    menu_text += f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
+    menu_text += f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
+    menu_text += "Let's make moves. 🚀\n\n"
+    menu_text += messages['footer']
 
     await bot.send_message(chat_id=chat_id or user_id, text=menu_text, reply_markup=reply_markup, parse_mode="Markdown")
 
