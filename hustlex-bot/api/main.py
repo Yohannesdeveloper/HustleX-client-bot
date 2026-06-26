@@ -272,10 +272,10 @@ async def save_profile(
     await send_telegram_message(
         chat_id=user_id,
         text=(
-            "✅ <b>Profile Published Successfully!</b>\n\n"
-            "Your freelancer profile is now live on HustleX! 🎉\n\n"
-            "Employers can now find and connect with you.\n"
-            "Use /menu to discover available opportunities."
+            "✅ <b>Freelancer Profile Completed!</b> 🎉\n\n"
+            "Your profile is now live on HustleX.\n"
+            "Employers can discover your skills and invite you to projects.\n"
+            "Use /menu to explore opportunities."
         )
     )
 
@@ -439,10 +439,10 @@ async def save_freelancer_profile(request: Request):
     await send_telegram_message(
         chat_id=user_id,
         text=(
-            "✅ <b>Profile Published Successfully!</b>\n\n"
-            "Your freelancer profile is now live on HustleX! 🎉\n\n"
-            "Employers can now find and connect with you.\n"
-            "Use /menu to discover available opportunities."
+            "✅ <b>Freelancer Profile Completed!</b> 🎉\n\n"
+            "Your profile is now live on HustleX.\n"
+            "Employers can discover your skills and invite you to projects.\n"
+            "Use /menu to explore opportunities."
         )
     )
 
