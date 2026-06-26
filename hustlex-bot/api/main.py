@@ -91,14 +91,18 @@ async def send_telegram_message(chat_id: int, text: str, reply_markup: dict = No
     if reply_markup:
         payload["reply_markup"] = reply_markup
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(url, json=payload)
-            data = resp.json()
-            if not data.get("ok"):
-                print(f"Failed to send Telegram message to {chat_id}: {data.get('description')}")
+        import urllib.request
+        data_bytes = json.dumps(payload).encode()
+        req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read())
+            if data.get("ok"):
+                print(f"send_telegram_message: OK sent to {chat_id}")
+            else:
+                print(f"send_telegram_message: Telegram API error for {chat_id}: {data.get('description')}")
             return data.get("ok", False)
     except Exception as e:
-        print(f"Error sending Telegram message to {chat_id}: {e}")
+        print(f"send_telegram_message: FAILED for {chat_id}: {e}")
         return False
 
 CHANNEL_ID = os.getenv("CHANNEL_ID", "-1003194542999")
@@ -169,7 +173,7 @@ async def get_profile(init_data: str = ""):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid initData")
     database = get_db()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
         profile = database.profiles.find_one({"user_id": user_id}, {"_id": 0, "cv_file_data": 0})
@@ -237,7 +241,7 @@ async def save_profile(
         profile_data["profile_pic_file_path"] = pic_path
 
     database = get_db()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="Could not connect to database")
 
     try:
@@ -271,12 +275,7 @@ async def save_profile(
 
     await send_telegram_message(
         chat_id=user_id,
-        text=(
-            "✅ <b>Freelancer Profile Completed!</b> 🎉\n\n"
-            "Your profile is now live on HustleX.\n"
-            "Employers can discover your skills and invite you to projects.\n"
-            "Use /menu to explore opportunities."
-        )
+        text="Profile completed successfully"
     )
 
     return {"status": "success", "message": "Profile saved successfully"}
@@ -392,7 +391,7 @@ async def save_freelancer_profile(request: Request):
         profile_data["cover_img_path"] = cover_path
 
     database = get_db()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
         database.freelancer_profiles.update_one(
@@ -436,15 +435,14 @@ async def save_freelancer_profile(request: Request):
     except Exception as e:
         print(f"[WARN] Failed to write registration callback for user {user_id}: {e}")
 
-    await send_telegram_message(
+    msg_sent = await send_telegram_message(
         chat_id=user_id,
-        text=(
-            "✅ <b>Freelancer Profile Completed!</b> 🎉\n\n"
-            "Your profile is now live on HustleX.\n"
-            "Employers can discover your skills and invite you to projects.\n"
-            "Use /menu to explore opportunities."
-        )
+        text="Profile completed successfully"
     )
+    if msg_sent:
+        print(f"Telegram message sent to user {user_id}")
+    else:
+        print(f"Telegram message FAILED for user {user_id} — the bot will still auto-send via callback poller")
 
     return {"status": "success", "message": "Profile created"}
 
@@ -458,7 +456,7 @@ async def get_freelancer_profile(init_data: str = ""):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid initData")
     database = get_db()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
         profile = database.freelancer_profiles.find_one({"user_id": user_id}, {"_id": 0})
@@ -505,7 +503,7 @@ async def register_user_endpoint(payload: RegisterRequest):
     }
 
     database = get_db()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="Could not connect to database")
 
     try:
@@ -552,7 +550,7 @@ async def register_user_endpoint(payload: RegisterRequest):
 @app.get("/api/jobs/{job_id}")
 async def get_job(job_id: str):
     database = get_db()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="Could not connect to database")
     job = database.jobs.find_one({"job_id": job_id})
     if not job:
@@ -591,7 +589,7 @@ async def get_job(job_id: str):
 async def check_user_registration(user_id: int):
     """Check if a user is registered. Used by the bot as a fallback."""
     database = get_db()
-    if not database:
+    if database is None:
         return {"registered": False, "error": "DB unavailable"}
     user = database.registered_users.find_one({"user_id": user_id})
     return {"registered": user is not None}
@@ -605,7 +603,7 @@ async def serve_register_page():
 @app.get("/api/cv/{user_id}")
 async def get_cv(user_id: int):
     database = get_db()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="Could not connect to database")
     profile = database.profiles.find_one({"user_id": user_id})
     if not profile or not profile.get("cv_file_data"):

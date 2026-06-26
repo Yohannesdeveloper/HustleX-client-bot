@@ -709,7 +709,15 @@ async def check_registration_callbacks(bot):
         register_user(user_id, None, None)
         logger.info(f"Auto-registered user {user_id} via callback poller")
 
-        # Show main menu automatically
+        # Send dedicated success message, then main menu
+        try:
+            await bot.send_message(
+                chat_id=user_id,
+                text="Profile completed successfully"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send success DM to user {user_id}: {e}")
+
         try:
             await send_main_menu_to_user(bot, user_id, profile_just_completed=True)
         except Exception as e:
@@ -2855,7 +2863,7 @@ async def handle_channel_profile_message(update: Update, context: ContextTypes.D
             return
 
         database = get_db()
-        if not database:
+        if database is None:
             return
 
         user_info = database.registered_users.find_one({"username": username})
