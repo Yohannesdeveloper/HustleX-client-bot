@@ -1012,18 +1012,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if the text matches any menu item
     action = menu_texts.get(text)
 
-    protected_actions = {
-        'menu', 'profile', 'applications', 'about', 'settings',
-        'settings_languages', 'settings_account', 'settings_cv', 'settings_terms',
-        'account_view_profile', 'account_notifications', 'account_delete',
-        'cv_view', 'cv_upload', 'cv_remove', 'terms_privacy',
-    }
     if action is None:
         return
-
-    if action in protected_actions:
-        if not await require_registration(update, context):
-            return
     
     if action == 'menu':
         await menu_callback(update, context)
