@@ -457,20 +457,6 @@ async def prompt_profile_setup(update: Update, context: ContextTypes.DEFAULT_TYP
     else:
         await chat.send_message(message, reply_markup=reply_markup)
 
-async def send_job_details(update: Update, context: ContextTypes.DEFAULT_TYPE, job_id: str = None):
-    job_id = job_id or get_pending_job_id(context)
-    job_details_url = f"{WEBAPP_URL.rstrip('/')}/job-details/{job_id}"
-    user_id = update.effective_user.id
-    lang_code = user_languages.get(user_id, 'en')
-    messages = {
-        'en': f"👋 Welcome! Here are the job details:\n\n{job_details_url}",
-    }
-    message = messages.get(lang_code, messages['en'])
-    if update.effective_message:
-        await update.effective_message.reply_text(message)
-    else:
-        await update.effective_chat.send_message(message)
-
 async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Route a registered user directly to menu or job details."""
     user_id = update.effective_user.id
@@ -489,11 +475,8 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
             await show_registration_prompt(update, context)
             return
 
-    if job_id:
-        await send_job_details(update, context, job_id)
-    else:
-        chat_id = update.effective_chat.id if update.effective_chat else user_id
-        await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
+    chat_id = update.effective_chat.id if update.effective_chat else user_id
+    await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
 
 # ---------------------------
 # /register_complete command
@@ -566,7 +549,6 @@ MAIN_MENU_MESSAGES = {
         'about_desc': "Learn more about HustleX platform",
         'settings': "Settings",
         'settings_desc': "Configure your preferences and account",
-        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     },
     'es': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nElige una pestaña:",
@@ -578,7 +560,6 @@ MAIN_MENU_MESSAGES = {
         'about_desc': "Conoce más sobre la plataforma HustleX",
         'settings': "Configuración",
         'settings_desc': "Configura tus preferencias y cuenta",
-        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     },
     'fr': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nChoisissez un onglet:",
@@ -590,7 +571,6 @@ MAIN_MENU_MESSAGES = {
         'about_desc': "En savoir plus sur la plateforme HustleX",
         'settings': "Paramètres",
         'settings_desc': "Configurez vos préférences et compte",
-        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     },
     'de': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nWählen Sie einen Tab:",
@@ -602,7 +582,6 @@ MAIN_MENU_MESSAGES = {
         'about_desc': "Erfahren Sie mehr über die HustleX-Plattform",
         'settings': "Einstellungen",
         'settings_desc': "Konfigurieren Sie Ihre Präferenzen und Konto",
-        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     },
     'it': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nScegli una scheda:",
@@ -614,7 +593,6 @@ MAIN_MENU_MESSAGES = {
         'about_desc': "Scopri di più sulla piattaforma HustleX",
         'settings': "Impostazioni",
         'settings_desc': "Configura le tue preferenze e account",
-        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     },
     'pt': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nEscolha uma aba:",
@@ -626,7 +604,6 @@ MAIN_MENU_MESSAGES = {
         'about_desc': "Saiba mais sobre a plataforma HustleX",
         'settings': "Configurações",
         'settings_desc': "Configure suas preferências e conta",
-        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     },
     'am': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nአንድ ትር ይምረጡ:",
@@ -638,7 +615,6 @@ MAIN_MENU_MESSAGES = {
         'about_desc': "ስለ HustleX መድረክ የበለጠ ይወቁ",
         'settings': "ቅንብሮች",
         'settings_desc': "የእርስዎን ምርጫዎች እና መለያ ያስተካክሉ",
-        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     }
 }
 
@@ -653,9 +629,6 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
     menu_text = ""
-    if profile_just_completed:
-        menu_text += "✅ *Profile Created Successfully!* 🎉\n"
-        menu_text += "Your freelancer profile is now live. Clients can discover your skills and invite you to projects.\n\n---\n\n"
     menu_text += f"{messages['title']}\n\n"
     menu_text += "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
     menu_text += "You're now in the *HustleX command center* — where freelancers become legends "\
@@ -665,8 +638,7 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     menu_text += f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
     menu_text += f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
     menu_text += f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
-    menu_text += "Let's make moves. 🚀\n\n"
-    menu_text += messages['footer']
+    menu_text += "Let's make moves. 🚀"
 
     await bot.send_message(chat_id=chat_id or user_id, text=menu_text, reply_markup=reply_markup, parse_mode="Markdown")
 
@@ -826,9 +798,6 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 registered_users.add(user_id)
                 context.user_data['_profile_just_completed'] = True
                 await menu_callback(update, context)
-                job_id = parsed_data.get('job_id') or get_pending_job_id(context)
-                if job_id:
-                    await send_job_details(update, context, job_id)
         except json.JSONDecodeError:
             pass
         except Exception as e:
