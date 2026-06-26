@@ -361,6 +361,7 @@ def escape_markdown_v2(text: str) -> str:
 
 async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show registration WebApp for unregistered users."""
+    import random
     user_id = update.effective_user.id
     lang_code = user_languages.get(user_id, 'en')
     welcome_messages = {
@@ -381,7 +382,8 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
         },
     }
     messages = welcome_messages.get(lang_code, welcome_messages['en'])
-    register_url = f"{WEBAPP_URL.rstrip('/')}/Register"
+    cache_buster = random.randint(100000, 999999)
+    register_url = f"{WEBAPP_URL.rstrip('/')}/Register?cb={cache_buster}"
     keyboard = [[InlineKeyboardButton(messages['register'], web_app=WebAppInfo(url=register_url))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     target = update.effective_message or update.effective_chat
@@ -434,11 +436,13 @@ async def prompt_phone_share(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await chat.send_message(message, reply_markup=reply_markup)
 
 async def prompt_profile_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    import random
     user_id = update.effective_user.id
     lang_code = user_languages.get(user_id, 'en')
     job_id = get_pending_job_id(context)
     start_arg = context.user_data.get("start_arg", "")
-    profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={job_id}"
+    cache_buster = random.randint(100000, 999999)
+    profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?cb={cache_buster}&job_id={job_id}"
     if start_arg:
         profile_url += f"&start={start_arg}"
     keyboard = [[InlineKeyboardButton("📝 Complete Profile Setup", web_app=WebAppInfo(url=profile_url))]]
