@@ -690,9 +690,9 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 logger.info(f"Profile completed for user {user_id}")
                 await update.effective_chat.send_message(
                     "✅ Profile Created Successfully! 🎉\n\n"
-                    "Your freelancer profile is now live. Clients can discover your skills and invite you to projects.\n\n"
-                    "Tap /start to access the main menu."
+                    "Your freelancer profile is now live. Clients can discover your skills and invite you to projects."
                 )
+                await menu_callback(update, context)
         except json.JSONDecodeError:
             pass
         except Exception as e:
