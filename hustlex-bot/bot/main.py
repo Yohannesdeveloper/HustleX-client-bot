@@ -389,16 +389,20 @@ async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYP
     # Check in-memory set first (fastest)
     if user_id in registered_users:
         return True
-    # Check via API (most reliable — same MongoDB as registration endpoint)
-    if await check_registration_via_api(user_id):
+    # Check via API (most reliable — uses Vercel's DB connection)
+    api_ok = await check_registration_via_api(user_id)
+    if api_ok:
         logger.info(f"User {user_id} confirmed registered via API")
         registered_users.add(user_id)
         register_user(user_id, update.effective_user.username, update.effective_user.first_name)
         return True
     # Fallback: direct MongoDB check
-    if is_user_registered(user_id):
+    db_ok = is_user_registered(user_id)
+    if db_ok:
+        logger.info(f"User {user_id} confirmed registered via direct MongoDB")
         registered_users.add(user_id)
         return True
+    logger.warning(f"User {user_id} NOT registered (API={api_ok}, DB={db_ok})")
     await show_registration_prompt(update, context)
     return False
 
@@ -828,8 +832,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang_code = user_languages.get(user_id, 'en')
     text = update.effective_message.text.strip()
 
-    # Intercept API's "Registration Successful" message and register user in-memory
-    if "Registration Successful" in text:
+    # Intercept API's success messages and register user in-memory
+    if "Registration Successful" in text or "Profile completed successfully" in text or "Freelancer Profile Completed" in text:
         registered_users.add(user_id)
         register_user(user_id, update.effective_user.username, update.effective_user.first_name)
         return
