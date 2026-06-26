@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HustleX - Freelancer Profile</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --glass-bg: rgba(30, 41, 59, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+      --primary-hover: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --error: #f87171;
+      --success: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 16px;
+      padding-top: 24px;
+      overflow-x: hidden;
+    }
+    body::before, body::after {
+      content: ''; position: absolute; width: 250px; height: 250px;
+      border-radius: 50%; filter: blur(120px); z-index: 0; pointer-events: none;
+    }
+    body::before { background: rgba(129, 140, 248, 0.25); top: 5%; left: -50px; }
+    body::after { background: rgba(192, 132, 252, 0.2); bottom: 5%; right: -50px; }
+    .container {
+      width: 100%; max-width: 520px; margin: 0 auto;
+      background: var(--glass-bg); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border); padding: 24px 20px;
+      border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      z-index: 1; position: relative;
+    }
+    .header { text-align: center; margin-bottom: 24px; }
+    .logo {
+      font-size: 28px; font-weight: 700;
+      background: var(--primary-gradient); -webkit-background-clip: text;
+      background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .subtitle { font-size: 14px; color: var(--text-muted); }
+    .section-title {
+      font-size: 16px; font-weight: 600; color: var(--accent);
+      margin: 20px 0 12px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    label {
+      display: block; font-size: 13px; font-weight: 500;
+      color: var(--text-muted); margin-bottom: 5px; padding-left: 2px;
+    }
+    input, select, textarea {
+      width: 100%; background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--glass-border); padding: 10px 12px;
+      border-radius: 10px; font-family: inherit; font-size: 14px;
+      color: var(--text-main); outline: none; transition: all 0.25s ease;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+    input::placeholder, textarea::placeholder { color: rgba(148, 163, 184, 0.4); }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+      background: rgba(15, 23, 42, 0.8);
+    }
+    select { appearance: none; -webkit-appearance: none; }
+    .entry-group {
+      background: rgba(15, 23, 42, 0.4); border-radius: 12px;
+      padding: 12px; margin-bottom: 10px; border: 1px solid var(--glass-border);
+    }
+    .entry-group .form-group { margin-bottom: 10px; }
+    .entry-group .form-group:last-child { margin-bottom: 0; }
+    .btn-add {
+      background: rgba(56, 189, 248, 0.1); border: 1px dashed var(--accent);
+      color: var(--accent); padding: 8px; border-radius: 10px;
+      cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500;
+      width: 100%; transition: all 0.2s;
+    }
+    .btn-add:hover { background: rgba(56, 189, 248, 0.2); }
+    .btn-remove {
+      background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.3);
+      color: var(--error); padding: 4px 10px; border-radius: 8px;
+      cursor: pointer; font-family: inherit; font-size: 12px;
+      margin-top: 8px; transition: all 0.2s;
+    }
+    .btn-remove:hover { background: rgba(248, 113, 113, 0.2); }
+    .btn-submit {
+      width: 100%; background: var(--primary-gradient); border: none;
+      padding: 14px; border-radius: 14px; color: white;
+      font-family: inherit; font-size: 16px; font-weight: 600;
+      cursor: pointer; transition: all 0.25s ease;
+      box-shadow: 0 4px 12px rgba(129, 140, 248, 0.2); margin-top: 20px;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: var(--primary-hover);
+      box-shadow: 0 6px 16px rgba(129, 140, 248, 0.35);
+      transform: translateY(-1px);
+    }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+    .success-screen {
+      display: none; text-align: center; padding: 40px 20px;
+    }
+    .success-screen .check {
+      font-size: 64px; margin-bottom: 16px;
+    }
+    .success-screen h2 { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+    .success-screen p { color: var(--text-muted); font-size: 15px; }
+    .error-msg {
+      color: var(--error); font-size: 13px; margin-top: 12px;
+      text-align: center; display: none;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .container { animation: fadeIn 0.5s ease forwards; }
+  </style>
+</head>
+<body>
+  <div class="container" id="formContainer">
+    <div class="header">
+      <div class="logo">HustleX</div>
+      <div class="subtitle">Set up your freelancer profile to start applying</div>
+    </div>
+
+    <form id="profileForm" enctype="multipart/form-data">
+      <!-- Basic Info -->
+      <div class="section-title">Basic Information</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="full_name" placeholder="John Doe" required>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="johndoe">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="john@example.com">
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" name="phone" placeholder="+251912345678">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Country</label>
+          <input type="text" name="country" placeholder="Ethiopia">
+        </div>
+        <div class="form-group">
+          <label>Timezone</label>
+          <select name="timezone">
+            <option value="">Select</option>
+            <option value="UTC-5">UTC-5 (Eastern)</option>
+            <option value="UTC-8">UTC-8 (Pacific)</option>
+            <option value="UTC+0">UTC+0 (GMT)</option>
+            <option value="UTC+1">UTC+1 (CET)</option>
+            <option value="UTC+2">UTC+2 (EET)</option>
+            <option value="UTC+3">UTC+3 (EAT)</option>
+            <option value="UTC+5:30">UTC+5:30 (IST)</option>
+            <option value="UTC+8">UTC+8 (CST)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Languages (comma separated)</label>
+        <input type="text" name="languages" placeholder="English, Amharic, Arabic">
+      </div>
+
+      <!-- Professional Info -->
+      <div class="section-title">Professional Details</div>
+      <div class="form-group">
+        <label>Headline</label>
+        <input type="text" name="headline" placeholder="Full Stack Developer | MERN Expert">
+      </div>
+      <div class="form-group">
+        <label>Short Bio</label>
+        <textarea name="short_bio" placeholder="Brief summary of your expertise..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Long Bio</label>
+        <textarea name="long_bio" placeholder="Detailed description of your experience and skills..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Professional Philosophy</label>
+        <textarea name="philosophy" placeholder="Your work philosophy..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Intro Video URL</label>
+        <input type="url" name="intro_video_url" placeholder="https://youtube.com/...">
+      </div>
+
+      <!-- Skills -->
+      <div class="section-title">Skills & Tools</div>
+      <div class="form-group">
+        <label>Primary Skills (comma separated)</label>
+        <input type="text" name="primary_skills" placeholder="React, Node.js, Python">
+      </div>
+      <div class="form-group">
+        <label>Secondary Skills (comma separated)</label>
+        <input type="text" name="secondary_skills" placeholder="UI/UX, DevOps, MongoDB">
+      </div>
+      <div class="form-group">
+        <label>Tools</label>
+        <input type="text" name="tools" placeholder="Git, VS Code, Figma">
+      </div>
+
+      <!-- Experience -->
+      <div class="section-title">Experience</div>
+      <div id="experienceContainer"></div>
+      <button type="button" class="btn-add" onclick="addExperience()">+ Add Experience</button>
+
+      <!-- Education -->
+      <div class="section-title">Education</div>
+      <div id="educationContainer"></div>
+      <button type="button" class="btn-add" onclick="addEducation()">+ Add Education</button>
+
+      <!-- Portfolio -->
+      <div class="section-title">Portfolio</div>
+      <div id="portfolioContainer"></div>
+      <button type="button" class="btn-add" onclick="addPortfolio()">+ Add Project</button>
+
+      <!-- Certifications -->
+      <div class="section-title">Certifications</div>
+      <div id="certificationsContainer"></div>
+      <button type="button" class="btn-add" onclick="addCertification()">+ Add Certification</button>
+
+      <!-- Availability -->
+      <div class="section-title">Availability</div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Availability</label>
+          <select name="availability">
+            <option value="">Select</option>
+            <option value="full-time">Full Time</option>
+            <option value="part-time">Part Time</option>
+            <option value="freelance">Freelance</option>
+            <option value="contract">Contract</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Weekly Hours</label>
+          <input type="number" name="weekly_hours" placeholder="40">
+        </div>
+        <div class="form-group">
+          <label>Work Type</label>
+          <select name="work_type">
+            <option value="">Select</option>
+            <option value="remote">Remote</option>
+            <option value="onsite">On-site</option>
+            <option value="hybrid">Hybrid</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Social Links -->
+      <div class="section-title">Social Links</div>
+      <div class="form-group">
+        <label>GitHub</label>
+        <input type="url" name="github_url" placeholder="https://github.com/username">
+      </div>
+      <div class="form-group">
+        <label>LinkedIn</label>
+        <input type="url" name="linkedin_url" placeholder="https://linkedin.com/in/username">
+      </div>
+      <div class="form-group">
+        <label>Portfolio Website</label>
+        <input type="url" name="portfolio_url" placeholder="https://yourportfolio.com">
+      </div>
+
+      <!-- Profile Settings -->
+      <div class="section-title">Profile Settings</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Profile Visibility</label>
+          <select name="profile_visibility">
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+          </select>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:20px;">
+          <input type="checkbox" name="featured_profile" id="featured" style="width:auto;">
+          <label for="featured" style="margin:0;">Featured Profile</label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">Publish Profile</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </form>
+  </div>
+
+  <div class="container success-screen" id="successScreen">
+    <div class="check">✅</div>
+    <h2>Profile Saved Successfully!</h2>
+    <p>Your HustleX account is now ready.<br>Redirecting you back to Telegram...</p>
+  </div>
+
+  <script>
+    let tg = null;
+    if (window.Telegram && window.Telegram.WebApp) {
+      tg = window.Telegram.WebApp;
+      tg.expand();
+    }
+
+    // Get params from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get('job_id') || '';
+    const startParam = urlParams.get('start') || '';
+
+    let expIndex = 0, eduIndex = 0, portIndex = 0, certIndex = 0;
+
+    function addExperience(data) {
+      const i = expIndex++;
+      const container = document.getElementById('experienceContainer');
+      const div = document.createElement('div');
+      div.className = 'entry-group';
+      div.innerHTML = `
+        <input type="hidden" name="exp_title_${i}" value="${data?.title || ''}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="exp_title_${i}" value="${data?.title || ''}" placeholder="Senior Developer" required>
+          </div>
+          <div class="form-group">
+            <label>Company</label>
+            <input type="text" name="exp_company_${i}" value="${data?.company || ''}" placeholder="Company name">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="month" name="exp_start_${i}" value="${data?.start || ''}">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="month" name="exp_end_${i}" value="${data?.end || ''}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="exp_desc_${i}" placeholder="Describe your role...">${data?.desc || ''}</textarea>
+        </div>
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">Remove</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function addEducation(data) {
+      const i = eduIndex++;
+      const container = document.getElementById('educationContainer');
+      const div = document.createElement('div');
+      div.className = 'entry-group';
+      div.innerHTML = `
+        <input type="hidden" name="edu_degree_${i}" value="${data?.degree || ''}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Degree</label>
+            <input type="text" name="edu_degree_${i}" value="${data?.degree || ''}" placeholder="BSc in Computer Science">
+          </div>
+          <div class="form-group">
+            <label>School</label>
+            <input type="text" name="edu_school_${i}" value="${data?.school || ''}" placeholder="University name">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Year</label>
+            <input type="number" name="edu_start_${i}" value="${data?.start || ''}" placeholder="2020">
+          </div>
+          <div class="form-group">
+            <label>End Year</label>
+            <input type="number" name="edu_end_${i}" value="${data?.end || ''}" placeholder="2024">
+          </div>
+        </div>
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">Remove</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function addPortfolio(data) {
+      const i = portIndex++;
+      const container = document.getElementById('portfolioContainer');
+      const div = document.createElement('div');
+      div.className = 'entry-group';
+      div.innerHTML = `
+        <input type="hidden" name="port_title_${i}" value="${data?.title || ''}">
+        <div class="form-group">
+          <label>Project Title</label>
+          <input type="text" name="port_title_${i}" value="${data?.title || ''}" placeholder="E-commerce Platform">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="port_desc_${i}" placeholder="Describe the project...">${data?.desc || ''}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Link</label>
+          <input type="url" name="port_link_${i}" value="${data?.link || ''}" placeholder="https://github.com/...">
+        </div>
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">Remove</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function addCertification(data) {
+      const i = certIndex++;
+      const container = document.getElementById('certificationsContainer');
+      const div = document.createElement('div');
+      div.className = 'entry-group';
+      div.innerHTML = `
+        <input type="hidden" name="cert_name_${i}" value="${data?.name || ''}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Certification Name</label>
+            <input type="text" name="cert_name_${i}" value="${data?.name || ''}" placeholder="AWS Certified Developer">
+          </div>
+          <div class="form-group">
+            <label>Organization</label>
+            <input type="text" name="cert_org_${i}" value="${data?.org || ''}" placeholder="Amazon Web Services">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Credential URL</label>
+          <input type="url" name="cert_url_${i}" value="${data?.url || ''}" placeholder="https://credential.com/...">
+        </div>
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">Remove</button>
+      `;
+      container.appendChild(div);
+    }
+
+    const form = document.getElementById('profileForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const formContainer = document.getElementById('formContainer');
+    const successScreen = document.getElementById('successScreen');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Publishing...';
+
+      // Count dynamic entries
+      document.querySelectorAll('#experienceContainer .entry-group').forEach((el, i) => {
+        el.querySelector('input[name^="exp_title_"]').name = `exp_title_${i}`;
+        el.querySelector('input[name^="exp_company_"]').name = `exp_company_${i}`;
+        el.querySelector('input[name^="exp_start_"]').name = `exp_start_${i}`;
+        el.querySelector('input[name^="exp_end_"]').name = `exp_end_${i}`;
+        el.querySelector('textarea[name^="exp_desc_"]').name = `exp_desc_${i}`;
+      });
+      document.querySelectorAll('#educationContainer .entry-group').forEach((el, i) => {
+        el.querySelector('input[name^="edu_degree_"]').name = `edu_degree_${i}`;
+        el.querySelector('input[name^="edu_school_"]').name = `edu_school_${i}`;
+        el.querySelector('input[name^="edu_start_"]').name = `edu_start_${i}`;
+        el.querySelector('input[name^="edu_end_"]').name = `edu_end_${i}`;
+      });
+      document.querySelectorAll('#portfolioContainer .entry-group').forEach((el, i) => {
+        el.querySelector('input[name^="port_title_"]').name = `port_title_${i}`;
+        el.querySelector('textarea[name^="port_desc_"]').name = `port_desc_${i}`;
+        el.querySelector('input[name^="port_link_"]').name = `port_link_${i}`;
+      });
+      document.querySelectorAll('#certificationsContainer .entry-group').forEach((el, i) => {
+        el.querySelector('input[name^="cert_name_"]').name = `cert_name_${i}`;
+        el.querySelector('input[name^="cert_org_"]').name = `cert_org_${i}`;
+        el.querySelector('input[name^="cert_url_"]').name = `cert_url_${i}`;
+      });
+
+      // Set counts
+      const formData = new FormData(form);
+      formData.set('exp_count', document.querySelectorAll('#experienceContainer .entry-group').length);
+      formData.set('edu_count', document.querySelectorAll('#educationContainer .entry-group').length);
+      formData.set('port_count', document.querySelectorAll('#portfolioContainer .entry-group').length);
+      formData.set('cert_count', document.querySelectorAll('#certificationsContainer .entry-group').length);
+      formData.set('initData', tg ? tg.initData : '');
+      formData.set('start_param', startParam);
+
+      try {
+        const response = await fetch('/api/freelancer-profile', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          formContainer.style.display = 'none';
+          successScreen.style.display = 'block';
+
+          // Backend will handle notifying the bot — just close after a moment
+          if (tg) {
+            setTimeout(() => { tg.close(); }, 2000);
+          }
+        } else {
+          const detail = data.detail;
+          throw new Error(typeof detail === 'string' ? detail : 'Failed to save profile');
+        }
+      } catch (err) {
+        errorMsg.textContent = `❌ ${err.message}`;
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Publish Profile';
+      }
+    });
+  </script>
+</body>
+</html>

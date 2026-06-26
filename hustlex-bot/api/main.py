@@ -1,5 +1,5 @@
 # api/main.py
-import os, hashlib, hmac, urllib.parse, json
+import os, hashlib, hmac, urllib.parse, json, base64
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
@@ -400,8 +400,41 @@ async def save_freelancer_profile(request: Request):
             {"$set": profile_data},
             upsert=True
         )
+        database.registered_users.update_one(
+            {"user_id": user_id},
+            {"$set": {"user_id": user_id, "registered_at": datetime.utcnow()}},
+            upsert=True,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    # Generate secure registration callback for the bot
+    REGISTRATION_SECRET = os.environ.get("REGISTRATION_SECRET") or BOT_TOKEN or ""
+    start_param = form.get("start_param") or ""
+    callback_data = {
+        "user_id": user_id,
+        "status": "SUCCESS",
+        "start_param": start_param,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    payload_str = json.dumps(callback_data, separators=(",", ":"), sort_keys=True)
+    signature = hmac.new(REGISTRATION_SECRET.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
+    callback_data["signature"] = signature
+    encoded = base64.b64encode(json.dumps(callback_data).encode()).decode()
+
+    try:
+        database.registration_callbacks.insert_one({
+            "user_id": user_id,
+            "status": "SUCCESS",
+            "start_param": start_param,
+            "timestamp": callback_data["timestamp"],
+            "signature": signature,
+            "payload": encoded,
+            "created_at": datetime.utcnow(),
+            "processed": False,
+        })
+    except Exception:
+        pass
 
     await send_telegram_message(
         user_id=user_id,

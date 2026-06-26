@@ -5,6 +5,9 @@ import os
 import re
 import logging
 import json
+import hmac
+import hashlib
+import base64
 from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
@@ -64,10 +67,16 @@ def is_user_registered(user_id: int) -> bool:
         logger.warning(f"is_user_registered({user_id}): get_db() returned None")
         return False
     try:
-        user = database.registered_users.find_one({"user_id": user_id})
-        if user is not None:
+        # Check registered_users collection (primary)
+        if database.registered_users.find_one({"user_id": user_id}):
             return True
-        logger.info(f"is_user_registered({user_id}): not found in MongoDB")
+        # Check profiles collection (legacy /api/profile saves here)
+        if database.profiles.find_one({"user_id": user_id}):
+            return True
+        # Check freelancer_profiles collection (/api/freelancer-profile saves here)
+        if database.freelancer_profiles.find_one({"user_id": user_id}):
+            return True
+        logger.info(f"is_user_registered({user_id}): not found in any MongoDB collection")
         return False
     except Exception as e:
         logger.error(f"Error checking user registration for {user_id}: {e}")
@@ -415,7 +424,10 @@ async def prompt_profile_setup(update: Update, context: ContextTypes.DEFAULT_TYP
     user_id = update.effective_user.id
     lang_code = user_languages.get(user_id, 'en')
     job_id = get_pending_job_id(context)
+    start_arg = context.user_data.get("start_arg", "")
     profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={job_id}"
+    if start_arg:
+        profile_url += f"&start={start_arg}"
     keyboard = [[InlineKeyboardButton("📝 Complete Profile Setup", web_app=WebAppInfo(url=profile_url))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     messages = {
@@ -490,6 +502,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     job_id = parse_job_id_from_start(context.args)
     if job_id:
         context.user_data["pending_job_id"] = job_id
+    # Store the raw start argument for deep-link preservation through registration
+    if context.args:
+        context.user_data["start_arg"] = context.args[0]
 
     await route_registered_user(update, context)
 
@@ -510,116 +525,105 @@ async def safe_edit_message(query, text, reply_markup=None, parse_mode=None, con
                 parse_mode=parse_mode
         )
 
-# ---------------------------
-# Menu callback
-# ---------------------------
-async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await require_registration(update, context):
-        return
-
-    user_id = update.effective_user.id
-    lang_code = user_languages.get(user_id, 'en')
-    
-    # Language-specific menu messages
-    menu_messages = {
-        'en': {
-            'title': "🌐 https://hustlexet.vercel.app/\n\nChoose a tab:",
-            'profile': "Profile",
-            'profile_desc': "Manage your freelancer profile and CV",
-            'applications': "Applications",
-            'applications_desc': "View and manage your job applications",
-            'about': "About HustleX",
-            'about_desc': "Learn more about HustleX platform",
-            'settings': "Settings",
-            'settings_desc': "Configure your preferences and account",
-            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
-        },
-        'es': {
-            'title': "🌐 https://hustlexet.vercel.app/\n\nElige una pestaña:",
-            'profile': "Perfil",
-            'profile_desc': "Gestiona tu perfil de freelancer y CV",
-            'applications': "Aplicaciones",
-            'applications_desc': "Ver y gestionar tus solicitudes de empleo",
-            'about': "Acerca de HustleX",
-            'about_desc': "Conoce más sobre la plataforma HustleX",
-            'settings': "Configuración",
-            'settings_desc': "Configura tus preferencias y cuenta",
-            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
-        },
-        'fr': {
-            'title': "🌐 https://hustlexet.vercel.app/\n\nChoisissez un onglet:",
-            'profile': "Profil",
-            'profile_desc': "Gérez votre profil de freelance et CV",
-            'applications': "Candidatures",
-            'applications_desc': "Voir et gérer vos candidatures",
-            'about': "À propos de HustleX",
-            'about_desc': "En savoir plus sur la plateforme HustleX",
-            'settings': "Paramètres",
-            'settings_desc': "Configurez vos préférences et compte",
-            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
-        },
-        'de': {
-            'title': "🌐 https://hustlexet.vercel.app/\n\nWählen Sie einen Tab:",
-            'profile': "Profil",
-            'profile_desc': "Verwalten Sie Ihr Freelancer-Profil und CV",
-            'applications': "Bewerbungen",
-            'applications_desc': "Bewerbungen anzeigen und verwalten",
-            'about': "Über HustleX",
-            'about_desc': "Erfahren Sie mehr über die HustleX-Plattform",
-            'settings': "Einstellungen",
-            'settings_desc': "Konfigurieren Sie Ihre Präferenzen und Konto",
-            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
-        },
-        'it': {
-            'title': "🌐 https://hustlexet.vercel.app/\n\nScegli una scheda:",
-            'profile': "Profilo",
-            'profile_desc': "Gestisci il tuo profilo freelance e CV",
-            'applications': "Candidature",
-            'applications_desc': "Visualizza e gestisci le tue candidature",
-            'about': "Informazioni su HustleX",
-            'about_desc': "Scopri di più sulla piattaforma HustleX",
-            'settings': "Impostazioni",
-            'settings_desc': "Configura le tue preferenze e account",
-            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
-        },
-        'pt': {
-            'title': "🌐 https://hustlexet.vercel.app/\n\nEscolha uma aba:",
-            'profile': "Perfil",
-            'profile_desc': "Gerencie seu perfil de freelancer e CV",
-            'applications': "Candidaturas",
-            'applications_desc': "Visualize e gerencie suas candidaturas",
-            'about': "Sobre o HustleX",
-            'about_desc': "Saiba mais sobre a plataforma HustleX",
-            'settings': "Configurações",
-            'settings_desc': "Configure suas preferências e conta",
-            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
-        },
-        'am': {
-            'title': "🌐 https://hustlexet.vercel.app/\n\nአንድ ትር ይምረጡ:",
-            'profile': "መገለጫ",
-            'profile_desc': "የእርስዎን ፍሪላንሰር መገለጫ እና CV ያስተዳድሩ",
-            'applications': "ማመልከቻዎች",
-            'applications_desc': "የስራ መጠየቅዎችን ይመልከቱ እና ያስተዳድሩ",
-            'about': "ስለ HustleX",
-            'about_desc': "ስለ HustleX መድረክ የበለጠ ይወቁ",
-            'settings': "ቅንብሮች",
-            'settings_desc': "የእርስዎን ምርጫዎች እና መለያ ያስተካክሉ",
-            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
-        }
+MAIN_MENU_MESSAGES = {
+    'en': {
+        'title': "🌐 https://hustlexet.vercel.app/\n\nChoose a tab:",
+        'profile': "Profile",
+        'profile_desc': "Manage your freelancer profile and CV",
+        'applications': "Applications",
+        'applications_desc': "View and manage your job applications",
+        'about': "About HustleX",
+        'about_desc': "Learn more about HustleX platform",
+        'settings': "Settings",
+        'settings_desc': "Configure your preferences and account",
+        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
+    },
+    'es': {
+        'title': "🌐 https://hustlexet.vercel.app/\n\nElige una pestaña:",
+        'profile': "Perfil",
+        'profile_desc': "Gestiona tu perfil de freelancer y CV",
+        'applications': "Aplicaciones",
+        'applications_desc': "Ver y gestionar tus solicitudes de empleo",
+        'about': "Acerca de HustleX",
+        'about_desc': "Conoce más sobre la plataforma HustleX",
+        'settings': "Configuración",
+        'settings_desc': "Configura tus preferencias y cuenta",
+        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
+    },
+    'fr': {
+        'title': "🌐 https://hustlexet.vercel.app/\n\nChoisissez un onglet:",
+        'profile': "Profil",
+        'profile_desc': "Gérez votre profil de freelance et CV",
+        'applications': "Candidatures",
+        'applications_desc': "Voir et gérer vos candidatures",
+        'about': "À propos de HustleX",
+        'about_desc': "En savoir plus sur la plateforme HustleX",
+        'settings': "Paramètres",
+        'settings_desc': "Configurez vos préférences et compte",
+        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
+    },
+    'de': {
+        'title': "🌐 https://hustlexet.vercel.app/\n\nWählen Sie einen Tab:",
+        'profile': "Profil",
+        'profile_desc': "Verwalten Sie Ihr Freelancer-Profil und CV",
+        'applications': "Bewerbungen",
+        'applications_desc': "Bewerbungen anzeigen und verwalten",
+        'about': "Über HustleX",
+        'about_desc': "Erfahren Sie mehr über die HustleX-Plattform",
+        'settings': "Einstellungen",
+        'settings_desc': "Konfigurieren Sie Ihre Präferenzen und Konto",
+        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
+    },
+    'it': {
+        'title': "🌐 https://hustlexet.vercel.app/\n\nScegli una scheda:",
+        'profile': "Profilo",
+        'profile_desc': "Gestisci il tuo profilo freelance e CV",
+        'applications': "Candidature",
+        'applications_desc': "Visualizza e gestisci le tue candidature",
+        'about': "Informazioni su HustleX",
+        'about_desc': "Scopri di più sulla piattaforma HustleX",
+        'settings': "Impostazioni",
+        'settings_desc': "Configura le tue preferenze e account",
+        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
+    },
+    'pt': {
+        'title': "🌐 https://hustlexet.vercel.app/\n\nEscolha uma aba:",
+        'profile': "Perfil",
+        'profile_desc': "Gerencie seu perfil de freelancer e CV",
+        'applications': "Candidaturas",
+        'applications_desc': "Visualize e gerencie suas candidaturas",
+        'about': "Sobre o HustleX",
+        'about_desc': "Saiba mais sobre a plataforma HustleX",
+        'settings': "Configurações",
+        'settings_desc': "Configure suas preferências e conta",
+        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
+    },
+    'am': {
+        'title': "🌐 https://hustlexet.vercel.app/\n\nአንድ ትር ይምረጡ:",
+        'profile': "መገለጫ",
+        'profile_desc': "የእርስዎን ፍሪላንሰር መገለጫ እና CV ያስተዳድሩ",
+        'applications': "ማመልከቻዎች",
+        'applications_desc': "የስራ መጠየቅዎችን ይመልከቱ እና ያስተዳድሩ",
+        'about': "ስለ HustleX",
+        'about_desc': "ስለ HustleX መድረክ የበለጠ ይወቁ",
+        'settings': "ቅንብሮች",
+        'settings_desc': "የእርስዎን ምርጫዎች እና መለያ ያስተካክሉ",
+        'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
     }
-    
-    messages = menu_messages.get(lang_code, menu_messages['en'])
-    
-    # Build menu with attached keyboard
+}
+
+async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_completed=False):
+    lang_code = user_languages.get(user_id, 'en')
+    messages = MAIN_MENU_MESSAGES.get(lang_code, MAIN_MENU_MESSAGES['en'])
+
     keyboard = [
         [KeyboardButton(f"ℹ️ {messages['about']}"), KeyboardButton(f"👤 {messages['profile']}")],
         [KeyboardButton(f"📋 {messages['applications']}"), KeyboardButton(f"⚙️ {messages['settings']}")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    
-    # Build menu message
+
     menu_text = ""
-    if context.user_data.pop('_profile_just_completed', False):
+    if profile_just_completed:
         menu_text += "✅ *Profile Created Successfully!* 🎉\n"
         menu_text += "Your freelancer profile is now live. Clients can discover your skills and invite you to projects.\n\n---\n\n"
     menu_text += f"{messages['title']}\n\n"
@@ -633,11 +637,82 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     menu_text += f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
     menu_text += "Let's make moves. 🚀\n\n"
     menu_text += messages['footer']
-    
-    if update.effective_message:
-        await update.effective_message.reply_text(menu_text, reply_markup=reply_markup)
-    else:
-        await update.effective_chat.send_message(menu_text, reply_markup=reply_markup)
+
+    await bot.send_message(chat_id=chat_id or user_id, text=menu_text, reply_markup=reply_markup)
+
+# ---------------------------
+# Menu callback
+# ---------------------------
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await require_registration(update, context):
+        return
+
+    user_id = update.effective_user.id
+    profile_just_completed = context.user_data.pop('_profile_just_completed', False)
+    chat_id = update.effective_chat.id if update.effective_chat else user_id
+    await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id, profile_just_completed=profile_just_completed)
+
+# ---------------------------
+# Registration callback poller (from API via MongoDB)
+# ---------------------------
+def verify_registration_callback(payload: dict) -> bool:
+    REGISTRATION_SECRET = os.environ.get("REGISTRATION_SECRET") or TOKEN or ""
+    sig = payload.pop("signature", "")
+    if not sig:
+        return False
+    payload_str = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    expected = hmac.new(REGISTRATION_SECRET.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+async def check_registration_callbacks(context: ContextTypes.DEFAULT_TYPE):
+    database = get_db()
+    if not database:
+        return
+    try:
+        unprocessed = list(database.registration_callbacks.find(
+            {"status": "SUCCESS", "processed": False}
+        ).limit(10))
+    except Exception:
+        return
+
+    for doc in unprocessed:
+        user_id = doc.get("user_id")
+        if not user_id:
+            continue
+
+        # Idempotency: atomically mark as processed
+        try:
+            result = database.registration_callbacks.update_one(
+                {"_id": doc["_id"], "processed": False},
+                {"$set": {"processed": True, "processed_at": datetime.utcnow()}}
+            )
+            if result.modified_count == 0:
+                continue
+        except Exception:
+            continue
+
+        # Verify HMAC signature
+        payload = {
+            "user_id": doc["user_id"],
+            "status": doc["status"],
+            "start_param": doc.get("start_param", ""),
+            "timestamp": doc.get("timestamp", ""),
+            "signature": doc.get("signature", ""),
+        }
+        if not verify_registration_callback(payload):
+            logger.warning(f"Invalid signature in registration callback for user {user_id}")
+            continue
+
+        # Mark user as registered
+        registered_users.add(user_id)
+        register_user(user_id, None, None)
+        logger.info(f"Auto-registered user {user_id} via callback poller")
+
+        # Show main menu automatically
+        try:
+            await send_main_menu_to_user(context.bot, user_id, profile_just_completed=True)
+        except Exception as e:
+            logger.error(f"Failed to send main menu to user {user_id}: {e}")
 
 # ---------------------------
 # Contact handler for phone number sharing
@@ -2900,6 +2975,10 @@ def main():
         filters.Chat(chat_id=os.getenv("CHANNEL_ID", "-1003194542999")) & filters.TEXT,
         handle_channel_profile_message,
     ), group=1)
+
+    # Register callback poller job (polls MongoDB every 3 seconds for registration callbacks)
+    if app.job_queue:
+        app.job_queue.run_repeating(check_registration_callbacks, interval=3, first=5)
 
     # Run bot
     app.run_polling()
