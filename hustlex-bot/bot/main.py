@@ -462,10 +462,17 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
     if job_id:
         context.user_data["pending_job_id"] = job_id
 
+    # Check registration first
+    if user_id not in registered_users and not is_user_registered(user_id):
+        await show_registration_prompt(update, context)
+        return
+
+    registered_users.add(user_id)
     if job_id:
         await send_job_details(update, context, job_id)
     else:
-        await menu_callback(update, context)
+        chat_id = update.effective_chat.id if update.effective_chat else user_id
+        await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
 
 # ---------------------------
 # /register_complete command
