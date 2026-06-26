@@ -709,12 +709,30 @@ async def check_registration_callbacks(bot):
         register_user(user_id, None, None)
         logger.info(f"Auto-registered user {user_id} via callback poller")
 
-        # Send dedicated success message, then main menu
+        # Send dedicated success message with profile details, then main menu
         try:
-            await bot.send_message(
-                chat_id=user_id,
-                text="Profile completed successfully"
-            )
+            profile = None
+            try:
+                database2 = get_db()
+                if database2 is not None:
+                    profile = database2.freelancer_profiles.find_one({"user_id": user_id})
+            except Exception:
+                pass
+            if profile:
+                skills_str = ", ".join(profile.get("primary_skills", [])) or "N/A"
+                location = profile.get("country", "") or "N/A"
+                success_text = (
+                    "✅ Freelancer Profile Completed!\n\n"
+                    f"👤 Name: {profile.get('full_name', 'N/A')}\n"
+                    f"📧 Email: {profile.get('email', 'N/A')}\n"
+                    f"📱 Phone: {profile.get('phone', 'N/A')}\n"
+                    f"📍 Location: {location}\n"
+                    f"💼 Skills: {skills_str}\n"
+                    f"⭐️ Level: {profile.get('headline', 'N/A')}"
+                )
+            else:
+                success_text = "Profile completed successfully"
+            await bot.send_message(chat_id=user_id, text=success_text)
         except Exception as e:
             logger.error(f"Failed to send success DM to user {user_id}: {e}")
 
@@ -2901,7 +2919,7 @@ async def handle_channel_profile_message(update: Update, context: ContextTypes.D
 def main():
     async def post_init(application):
         await application.bot.set_my_commands([
-            BotCommand("start", "Main menu"),
+            BotCommand("start", "Menu"),
             BotCommand("profile", "Manage your freelancer profile"),
         ])
         await application.bot.set_chat_menu_button(menu_button=MenuButtonCommands())

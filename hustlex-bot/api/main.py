@@ -435,9 +435,20 @@ async def save_freelancer_profile(request: Request):
     except Exception as e:
         print(f"[WARN] Failed to write registration callback for user {user_id}: {e}")
 
+    skills_str = ", ".join(profile_data.get("primary_skills", [])) or "N/A"
+    location = profile_data.get("country", "") or "N/A"
+    success_text = (
+        "✅ Freelancer Profile Completed!\n\n"
+        f"👤 Name: {profile_data.get('full_name', 'N/A')}\n"
+        f"📧 Email: {profile_data.get('email', 'N/A')}\n"
+        f"📱 Phone: {profile_data.get('phone', 'N/A')}\n"
+        f"📍 Location: {location}\n"
+        f"💼 Skills: {skills_str}\n"
+        f"⭐️ Level: {profile_data.get('headline', 'N/A')}"
+    )
     msg_sent = await send_telegram_message(
         chat_id=user_id,
-        text="Profile completed successfully"
+        text=success_text
     )
     if msg_sent:
         print(f"Telegram message sent to user {user_id}")
