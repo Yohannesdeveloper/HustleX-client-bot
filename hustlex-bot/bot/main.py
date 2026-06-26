@@ -618,7 +618,11 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
     # Build menu message
-    menu_text = f"{messages['title']}\n\n"
+    menu_text = ""
+    if context.user_data.pop('_profile_just_completed', False):
+        menu_text += "✅ *Profile Created Successfully!* 🎉\n"
+        menu_text += "Your freelancer profile is now live. Clients can discover your skills and invite you to projects.\n\n---\n\n"
+    menu_text += f"{messages['title']}\n\n"
     menu_text += "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
     menu_text += "You're now in the *HustleX command center* — where freelancers become legends "\
                  "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
@@ -688,10 +692,7 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
             elif parsed_data.get('action') == 'profile_complete':
                 user_id = update.effective_user.id
                 logger.info(f"Profile completed for user {user_id}")
-                await update.effective_chat.send_message(
-                    "✅ Profile Created Successfully! 🎉\n\n"
-                    "Your freelancer profile is now live. Clients can discover your skills and invite you to projects."
-                )
+                context.user_data['_profile_just_completed'] = True
                 await menu_callback(update, context)
         except json.JSONDecodeError:
             pass
