@@ -326,6 +326,51 @@
     const startParam = urlParams.get('start') || '';
 
     let expIndex = 0, eduIndex = 0, portIndex = 0, certIndex = 0;
+    let existingProfile = null;
+
+    async function loadExistingProfile() {
+      if (!tg || !tg.initData) return;
+      try {
+        const resp = await fetch(`/api/freelancer-profile?init_data=${encodeURIComponent(tg.initData)}`);
+        const data = await resp.json();
+        if (data.has_profile) {
+          existingProfile = data;
+          // Pre-fill simple fields (MongoDB keys match form field names)
+          const simpleFields = ['full_name','username','email','phone','country','timezone',
+            'headline','short_bio','long_bio','philosophy','intro_video_url','tools',
+            'availability','weekly_hours','work_type'];
+          simpleFields.forEach(f => {
+            const el = document.querySelector(`[name="${f}"]`);
+            if (el && data[f] !== undefined && data[f] !== null) el.value = data[f];
+          });
+          // Handle arrays as comma-separated strings
+          ['languages','primary_skills','secondary_skills'].forEach(f => {
+            const el = document.querySelector(`[name="${f}"]`);
+            if (el && Array.isArray(data[f])) el.value = data[f].join(', ');
+          });
+          // Social links (stored as social.github etc. in MongoDB)
+          const socialMap = {'github_url':'github','linkedin_url':'linkedin','portfolio_url':'portfolio'};
+          for (const [field, key] of Object.entries(socialMap)) {
+            const el = document.querySelector(`[name="${field}"]`);
+            if (el && data.social?.[key]) el.value = data.social[key];
+          }
+          // Profile visibility
+          const visEl = document.querySelector('[name="profile_visibility"]');
+          if (visEl && data.settings?.visibility) visEl.value = data.settings.visibility;
+          // Featured checkbox
+          const featured = document.getElementById('featured');
+          if (featured && data.settings?.featured_applied) featured.checked = true;
+          // Dynamic entries
+          (data.experience || []).forEach(addExperience);
+          (data.education || []).forEach(addEducation);
+          (data.portfolio || []).forEach(addPortfolio);
+          (data.certifications || []).forEach(addCertification);
+        }
+      } catch (e) {
+        console.warn('Failed to load existing profile:', e);
+      }
+    }
+    loadExistingProfile();
 
     function addExperience(data) {
       const i = expIndex++;

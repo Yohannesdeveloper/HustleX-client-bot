@@ -448,6 +448,27 @@ async def save_freelancer_profile(request: Request):
 
     return {"status": "success", "message": "Profile created"}
 
+@app.get("/api/freelancer-profile")
+async def get_freelancer_profile(init_data: str = ""):
+    if not init_data:
+        raise HTTPException(status_code=401, detail="Missing initData")
+    if not BOT_TOKEN:
+        raise HTTPException(status_code=500, detail="BOT_TOKEN not set")
+    user_id = init_data_to_user_id(init_data, BOT_TOKEN)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid initData")
+    database = get_db()
+    if not database:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
+    try:
+        profile = database.freelancer_profiles.find_one({"user_id": user_id}, {"_id": 0})
+        if not profile:
+            return {"has_profile": False, "user_id": user_id}
+        profile["has_profile"] = True
+        return profile
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
 @app.post("/api/register")
 async def register_user_endpoint(payload: RegisterRequest):
     if not BOT_TOKEN:
