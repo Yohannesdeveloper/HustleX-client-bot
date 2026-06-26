@@ -667,7 +667,7 @@ def verify_registration_callback(payload: dict) -> bool:
 
 async def check_registration_callbacks(bot):
     database = get_db()
-    if not database:
+    if database is None:
         return
     try:
         unprocessed = list(database.registration_callbacks.find(
