@@ -91,11 +91,9 @@ async def send_telegram_message(chat_id: int, text: str, reply_markup: dict = No
     if reply_markup:
         payload["reply_markup"] = reply_markup
     try:
-        import urllib.request
-        data_bytes = json.dumps(payload).encode()
-        req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, json=payload)
+            data = resp.json()
             if data.get("ok"):
                 print(f"send_telegram_message: OK sent to {chat_id}")
             else:
