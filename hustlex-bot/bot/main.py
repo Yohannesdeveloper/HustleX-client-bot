@@ -626,33 +626,34 @@ MAIN_MENU_MESSAGES = {
     }
 }
 
-async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_completed=False):
+async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_completed=False, user_first_name=""):
     lang_code = user_languages.get(user_id, 'en')
     messages = MAIN_MENU_MESSAGES.get(lang_code, MAIN_MENU_MESSAGES['en'])
 
     keyboard = [
-        [KeyboardButton(f"ℹ️ {messages['about']}"), KeyboardButton(f"👤 {messages['profile']}")],
-        [KeyboardButton(f"📋 {messages['applications']}"), KeyboardButton(f"⚙️ {messages['settings']}")]
+        [KeyboardButton(f"📋 {messages['applications']}"), KeyboardButton(f"👤 {messages['profile']}")],
+        [KeyboardButton(f"⚙️ {messages['settings']}"), KeyboardButton(f"ℹ️ {messages['about']}")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-    menu_text = ""
-    if profile_just_completed:
-        menu_text += "✅ *Profile Created Successfully!* 🎉\n"
-        menu_text += "Your freelancer profile is now live. Clients can discover your skills and invite you to projects.\n\n---\n\n"
-    menu_text += f"{messages['title']}\n\n"
-    menu_text += "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
-    menu_text += "You're now in the *HustleX command center* — where freelancers become legends "\
-                 "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
-    menu_text += "*⚔️ Your Arsenal:*\n"
-    menu_text += f"📋 {messages['applications']} — Track your conquests, seal the deals\n"
-    menu_text += f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
-    menu_text += f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
-    menu_text += f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
-    menu_text += "Let's make moves. 🚀\n\n"
-    menu_text += messages['footer']
+    name = user_first_name or "there"
+    menu_text = (
+        "🌟 *Welcome to HustleX!* 🌟\n\n"
+        f"Hello {name}! 👋\n\n"
+        "I'm your HustleX assistant. Here's what I can do:\n\n"
+        f"📋 {messages['applications']} — Manage your job applications\n"
+        f"👤 {messages['profile']} — Manage your freelancer profile\n"
+        f"⚙️ {messages['settings']} — Configure your preferences\n"
+        f"ℹ️ {messages['about']} — Learn about HustleX\n\n"
+        "Available commands:\n"
+        "/start — Show this welcome message\n"
+        "/help — Show help information\n"
+        "/profile — View your profile status\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━\n"
+        "💼 HustleX — Connecting Talent with Opportunity"
+    )
 
-    await bot.send_message(chat_id=chat_id or user_id, text=menu_text, reply_markup=reply_markup)
+    await bot.send_message(chat_id=chat_id or user_id, text=menu_text, reply_markup=reply_markup, parse_mode="Markdown")
 
 # ---------------------------
 # Menu callback
@@ -662,9 +663,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
+    first_name = update.effective_user.first_name or ""
     profile_just_completed = context.user_data.pop('_profile_just_completed', False)
     chat_id = update.effective_chat.id if update.effective_chat else user_id
-    await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id, profile_just_completed=profile_just_completed)
+    await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id, profile_just_completed=profile_just_completed, user_first_name=first_name)
 
 # ---------------------------
 # Registration callback poller (from API via MongoDB)
