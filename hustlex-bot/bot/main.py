@@ -832,10 +832,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang_code = user_languages.get(user_id, 'en')
     text = update.effective_message.text.strip()
 
-    # Intercept API's success messages and register user in-memory
+    # Intercept API's success messages, register user in-memory, and show menu
     if "Registration Successful" in text or "Profile completed successfully" in text or "Freelancer Profile Completed" in text:
         registered_users.add(user_id)
         register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        await send_main_menu_to_user(
+            context.bot, user_id,
+            chat_id=update.effective_chat.id if update.effective_chat else user_id,
+            user_first_name=update.effective_user.first_name or ""
+        )
         return
 
     if text == "❌ Cancel" and (
