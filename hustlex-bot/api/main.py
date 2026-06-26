@@ -270,7 +270,7 @@ async def save_profile(
     )
 
     await send_telegram_message(
-        user_id=user_id,
+        chat_id=user_id,
         text=(
             "✅ <b>Profile Published Successfully!</b>\n\n"
             "Your freelancer profile is now live on HustleX! 🎉\n\n"
@@ -433,11 +433,11 @@ async def save_freelancer_profile(request: Request):
             "created_at": datetime.utcnow(),
             "processed": False,
         })
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[WARN] Failed to write registration callback for user {user_id}: {e}")
 
     await send_telegram_message(
-        user_id=user_id,
+        chat_id=user_id,
         text=(
             "✅ <b>Profile Published Successfully!</b>\n\n"
             "Your freelancer profile is now live on HustleX! 🎉\n\n"
