@@ -8,6 +8,7 @@ import json
 import hmac
 import hashlib
 import base64
+import asyncio
 from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
@@ -664,7 +665,7 @@ def verify_registration_callback(payload: dict) -> bool:
     expected = hmac.new(REGISTRATION_SECRET.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, sig)
 
-async def check_registration_callbacks(context: ContextTypes.DEFAULT_TYPE):
+async def check_registration_callbacks(bot):
     database = get_db()
     if not database:
         return
@@ -710,9 +711,19 @@ async def check_registration_callbacks(context: ContextTypes.DEFAULT_TYPE):
 
         # Show main menu automatically
         try:
-            await send_main_menu_to_user(context.bot, user_id, profile_just_completed=True)
+            await send_main_menu_to_user(bot, user_id, profile_just_completed=True)
         except Exception as e:
             logger.error(f"Failed to send main menu to user {user_id}: {e}")
+
+async def _callback_poller_loop(app):
+    """Background loop that polls registration_callbacks every 3 seconds."""
+    await asyncio.sleep(5)
+    while True:
+        try:
+            await check_registration_callbacks(app.bot)
+        except Exception as e:
+            logger.error(f"Callback poller error: {e}")
+        await asyncio.sleep(3)
 
 # ---------------------------
 # Contact handler for phone number sharing
@@ -2886,6 +2897,8 @@ def main():
             BotCommand("profile", "Manage your freelancer profile"),
         ])
         await application.bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+        # Start background callback poller for registration handoff
+        asyncio.create_task(_callback_poller_loop(application))
 
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
     
@@ -2975,10 +2988,6 @@ def main():
         filters.Chat(chat_id=os.getenv("CHANNEL_ID", "-1003194542999")) & filters.TEXT,
         handle_channel_profile_message,
     ), group=1)
-
-    # Register callback poller job (polls MongoDB every 3 seconds for registration callbacks)
-    if app.job_queue:
-        app.job_queue.run_repeating(check_registration_callbacks, interval=3, first=5)
 
     # Run bot
     app.run_polling()
