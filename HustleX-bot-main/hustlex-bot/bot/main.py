@@ -353,79 +353,112 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Language-specific menu messages
     menu_messages = {
         'en': {
-            'title': "Choose a tab:",
-            'profile': "👤 Profile",
-            'applications': "📋 Applications",
-            'about': "ℹ️ About HustleX",
-            'settings': "⚙️ Settings",
-            'error': "❌ Error: WebApp URL is unreachable. Please try again later or contact support."
+            'title': "🌐 https://hustlexet.vercel.app/\n\nChoose a tab:",
+            'profile': "Profile",
+            'profile_desc': "Manage your freelancer profile and CV",
+            'applications': "Applications",
+            'applications_desc': "View and manage your job applications",
+            'about': "About HustleX",
+            'about_desc': "Learn more about HustleX platform",
+            'settings': "Settings",
+            'settings_desc': "Configure your preferences and account",
+            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
         },
         'es': {
-            'title': "Elige una pestaña:",
-            'profile': "👤 Perfil",
-            'applications': "📋 Aplicaciones",
-            'about': "ℹ️ Acerca de HustleX",
-            'settings': "⚙️ Configuración",
-            'error': "❌ Error: La URL de la aplicación web no es accesible. Por favor, inténtalo de nuevo más tarde o contacta con soporte."
+            'title': "🌐 https://hustlexet.vercel.app/\n\nElige una pestaña:",
+            'profile': "Perfil",
+            'profile_desc': "Gestiona tu perfil de freelancer y CV",
+            'applications': "Aplicaciones",
+            'applications_desc': "Ver y gestionar tus solicitudes de empleo",
+            'about': "Acerca de HustleX",
+            'about_desc': "Conoce más sobre la plataforma HustleX",
+            'settings': "Configuración",
+            'settings_desc': "Configura tus preferencias y cuenta",
+            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
         },
         'fr': {
-            'title': "Choisissez un onglet:",
-            'profile': "👤 Profil",
-            'applications': "📋 Candidatures",
-            'about': "ℹ️ À propos de HustleX",
-            'settings': "⚙️ Paramètres",
-            'error': "❌ Erreur: L'URL de l'application web est inaccessible. Veuillez réessayer plus tard ou contacter le support."
+            'title': "🌐 https://hustlexet.vercel.app/\n\nChoisissez un onglet:",
+            'profile': "Profil",
+            'profile_desc': "Gérez votre profil de freelance et CV",
+            'applications': "Candidatures",
+            'applications_desc': "Voir et gérer vos candidatures",
+            'about': "À propos de HustleX",
+            'about_desc': "En savoir plus sur la plateforme HustleX",
+            'settings': "Paramètres",
+            'settings_desc': "Configurez vos préférences et compte",
+            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
         },
         'de': {
-            'title': "Wählen Sie einen Tab:",
-            'profile': "👤 Profil",
-            'applications': "📋 Bewerbungen",
-            'about': "ℹ️ Über HustleX",
-            'settings': "⚙️ Einstellungen",
-            'error': "❌ Fehler: WebApp-URL ist nicht erreichbar. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support."
+            'title': "🌐 https://hustlexet.vercel.app/\n\nWählen Sie einen Tab:",
+            'profile': "Profil",
+            'profile_desc': "Verwalten Sie Ihr Freelancer-Profil und CV",
+            'applications': "Bewerbungen",
+            'applications_desc': "Bewerbungen anzeigen und verwalten",
+            'about': "Über HustleX",
+            'about_desc': "Erfahren Sie mehr über die HustleX-Plattform",
+            'settings': "Einstellungen",
+            'settings_desc': "Konfigurieren Sie Ihre Präferenzen und Konto",
+            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
         },
         'it': {
-            'title': "Scegli una scheda:",
-            'profile': "👤 Profilo",
-            'applications': "📋 Candidature",
-            'about': "ℹ️ Informazioni su HustleX",
-            'settings': "⚙️ Impostazioni",
-            'error': "❌ Errore: L'URL dell'applicazione web non è raggiungibile. Riprova più tardi o contatta il supporto."
+            'title': "🌐 https://hustlexet.vercel.app/\n\nScegli una scheda:",
+            'profile': "Profilo",
+            'profile_desc': "Gestisci il tuo profilo freelance e CV",
+            'applications': "Candidature",
+            'applications_desc': "Visualizza e gestisci le tue candidature",
+            'about': "Informazioni su HustleX",
+            'about_desc': "Scopri di più sulla piattaforma HustleX",
+            'settings': "Impostazioni",
+            'settings_desc': "Configura le tue preferenze e account",
+            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
         },
         'pt': {
-            'title': "Escolha uma aba:",
-            'profile': "👤 Perfil",
-            'applications': "📋 Candidaturas",
-            'about': "ℹ️ Sobre o HustleX",
-            'settings': "⚙️ Configurações",
-            'error': "❌ Erro: A URL da aplicação web não está acessível. Tente novamente mais tarde ou entre em contato com o suporte."
+            'title': "🌐 https://hustlexet.vercel.app/\n\nEscolha uma aba:",
+            'profile': "Perfil",
+            'profile_desc': "Gerencie seu perfil de freelancer e CV",
+            'applications': "Candidaturas",
+            'applications_desc': "Visualize e gerencie suas candidaturas",
+            'about': "Sobre o HustleX",
+            'about_desc': "Saiba mais sobre a plataforma HustleX",
+            'settings': "Configurações",
+            'settings_desc': "Configure suas preferências e conta",
+            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
         },
         'am': {
-            'title': "አንድ ትር ይምረጡ:",
-            'profile': "👤 መገለጫ",
-            'applications': "📋 ማመልከቻዎች",
-            'about': "ℹ️ ስለ HustleX",
-            'settings': "⚙️ ቅንብሮች",
-            'error': "❌ ስህተት: የድር መተግበሪያ URL አይደርስም። እባክዎ ቆይተው ይሞክሩ ወይም ድጋፍን ያግኙ።"
+            'title': "🌐 https://hustlexet.vercel.app/\n\nአንድ ትር ይምረጡ:",
+            'profile': "መገለጫ",
+            'profile_desc': "የእርስዎን ፍሪላንሰር መገለጫ እና CV ያስተዳድሩ",
+            'applications': "ማመልከቻዎች",
+            'applications_desc': "የስራ መጠየቅዎችን ይመልከቱ እና ያስተዳድሩ",
+            'about': "ስለ HustleX",
+            'about_desc': "ስለ HustleX መድረክ የበለጠ ይወቁ",
+            'settings': "ቅንብሮች",
+            'settings_desc': "የእርስዎን ምርጫዎች እና መለያ ያስተካክሉ",
+            'footer': "HustleX (https://hustlexet.vercel.app/)\nHustleX — Hire Elite Freelancers Worldwide\nConnect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence.",
         }
     }
     
     messages = menu_messages.get(lang_code, menu_messages['en'])
     
-    # Skip WebApp URL validation for now (domain may not be set up yet)
-    # if not await validate_webapp_url(WEBAPP_URL):
-    #     await context.bot.send_message(
-    #         chat_id=update.effective_chat.id,
-    #         text=messages['error']
-    #     )
-    #     return
-    
-    # Reply keyboard for menu options
-    reply_keyboard = [
-        [KeyboardButton(messages['profile'])],
-        [KeyboardButton(messages['applications']), KeyboardButton(messages['about'])],
-        [KeyboardButton(messages['settings'])]
+    # Build menu with attached keyboard
+    keyboard = [
+        [KeyboardButton(f"ℹ️ {messages['about']}"), KeyboardButton(f"👤 {messages['profile']}")],
+        [KeyboardButton(f"📋 {messages['applications']}"), KeyboardButton(f"⚙️ {messages['settings']}")]
     ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
+    # Build menu message
+    menu_text = f"{messages['title']}\n\n"
+    menu_text += "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
+    menu_text += "You're now in the *HustleX command center* — where freelancers become legends "\
+                 "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
+    menu_text += "*⚔️ Your Arsenal:*\n"
+    menu_text += f"📋 {messages['applications']} — Track your conquests, seal the deals\n"
+    menu_text += f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
+    menu_text += f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
+    menu_text += f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
+    menu_text += "Let's make moves. 🚀\n\n"
+    menu_text += messages['footer']
     
     # Clean up old message to prevent keyboard interference
     await try_delete_user_message(update, context)
@@ -433,8 +466,9 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Send message with reply keyboard
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=messages['title'],
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False)
+        text=menu_text,
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
     )
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

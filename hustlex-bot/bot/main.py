@@ -980,7 +980,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Join *HustleX* today and turn your skills into opportunities! 🔥 "
             "Because here, *every hustle counts* 💼💎"
         )
-        await update.effective_message.reply_text(about_text, parse_mode="Markdown")
+        await update.effective_message.reply_text(about_text, parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
     elif action == 'settings':
         await settings_cb(update, context)
     elif action == 'settings_languages':
@@ -1144,14 +1144,15 @@ async def applications_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.effective_message.reply_text(
             f"📋 *Applications*\n\nClick here to access your applications: {applications_url}",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            reply_markup=ReplyKeyboardRemove()
         )
 
 async def about_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     about_text = (
         "🚀 *About HustleX*\n\n"
         "Welcome to *HustleX* – where *ambition meets opportunity!* ✨\n\n"
-        "At HustleX, we believe talent has *no limits* 🌍. Whether you’re a designer 🎨, "
+        "At HustleX, we believe talent has *no limits* 🌍. Whether you're a designer 🎨, "
         "developer 💻, writer ✍️, or digital wizard 🪄, we connect skilled freelancers with "
         "clients who value *quality, creativity, and reliability*.\n\n"
         "*Our mission:* 💪 Elevate projects 📈 Transform careers 🌟\n\n"
@@ -1168,7 +1169,7 @@ async def about_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.answer()
         await q.edit_message_text(about_text, parse_mode="Markdown")
     else:
-        await update.effective_message.reply_text(about_text, parse_mode="Markdown")
+        await update.effective_message.reply_text(about_text, parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
 
 async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -2501,55 +2502,55 @@ async def file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def post_job_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         await update.callback_query.answer()
-        await update.callback_query.message.reply_text("📝 Enter Job Title:")
+        await update.callback_query.message.reply_text("📝 Enter Job Title:", reply_markup=ReplyKeyboardRemove())
     else:
-        await update.message.reply_text("📝 Enter Job Title:")
+        await update.message.reply_text("📝 Enter Job Title:", reply_markup=ReplyKeyboardRemove())
     return JOB_TITLE
 
 async def job_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["job_title"] = update.message.text
-    await update.message.reply_text("Enter Job Type (Full-time, Part-time, Freelance):")
+    await update.message.reply_text("Enter Job Type (Full-time, Part-time, Freelance):", reply_markup=ReplyKeyboardRemove())
     return JOB_TYPE
 
 async def job_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["job_type"] = update.message.text
-    await update.message.reply_text("Enter Work Location:")
+    await update.message.reply_text("Enter Work Location:", reply_markup=ReplyKeyboardRemove())
     return WORK_LOCATION
 
 async def work_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["work_location"] = update.message.text
-    await update.message.reply_text("Enter Salary:")
+    await update.message.reply_text("Enter Salary:", reply_markup=ReplyKeyboardRemove())
     return SALARY
 
 async def salary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["salary"] = update.message.text
-    await update.message.reply_text("Enter Deadline (YYYY-MM-DD):")
+    await update.message.reply_text("Enter Deadline (YYYY-MM-DD):", reply_markup=ReplyKeyboardRemove())
     return DEADLINE
 
 async def deadline(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["deadline"] = update.message.text
-    await update.message.reply_text("Enter Job Description:")
+    await update.message.reply_text("Enter Job Description:", reply_markup=ReplyKeyboardRemove())
     return DESCRIPTION
 
 async def description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["description"] = update.message.text
-    await update.message.reply_text("Enter Client Type (Private / Other):")
+    await update.message.reply_text("Enter Client Type (Private / Other):", reply_markup=ReplyKeyboardRemove())
     return CLIENT_TYPE
 
 async def client_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["client_type"] = update.message.text
-    await update.message.reply_text("Enter Company Name:")
+    await update.message.reply_text("Enter Company Name:", reply_markup=ReplyKeyboardRemove())
     return COMPANY_NAME
 
 async def company_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["company_name"] = update.message.text
-    await update.message.reply_text("Is the company verified? (✅ / No)")
+    await update.message.reply_text("Is the company verified? (✅ / No)", reply_markup=ReplyKeyboardRemove())
     return VERIFIED
 
 async def verified(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip().lower()
     if text not in ["yes", "no", "✅"]:
-        await update.message.reply_text("Please reply with ✅ or No")
+        await update.message.reply_text("Please reply with ✅ or No", reply_markup=ReplyKeyboardRemove())
         return VERIFIED
     
     # Set the value to ✅ if the input is 'yes' or the checkmark symbol
@@ -2557,12 +2558,12 @@ async def verified(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["verified"] = "✅"
     else:
         context.user_data["verified"] = "No"
-    await update.message.reply_text("List any previous jobs posted by this company (or type 'None'):")
+    await update.message.reply_text("List any previous jobs posted by this company (or type 'None'):", reply_markup=ReplyKeyboardRemove())
     return PREVIOUS_JOBS
 
 async def previous_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["previous_jobs"] = update.message.text
-    await update.message.reply_text("Enter the link for 'View Details':")
+    await update.message.reply_text("Enter the link for 'View Details':", reply_markup=ReplyKeyboardRemove())
     return JOB_LINK
 
 async def job_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2581,7 +2582,7 @@ async def job_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Error: Invalid channel ID. Please verify the CHANNEL_ID in the bot configuration.\n"
             "To find the correct ID, add the bot to the channel, send a message, and forward it to @userinfobot or @RawDataBot."
         )
-        await update.message.reply_text(error_msg)
+        await update.message.reply_text(error_msg, reply_markup=ReplyKeyboardRemove())
         logger.error(f"Job posting failed due to invalid CHANNEL_ID: {CHANNEL_ID}")
         return ConversationHandler.END
 
@@ -2590,7 +2591,7 @@ async def job_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Error: The bot does not have permission to post in the channel.\n"
             "Please make the bot an admin with 'Send Messages' permission."
         )
-        await update.message.reply_text(error_msg)
+        await update.message.reply_text(error_msg, reply_markup=ReplyKeyboardRemove())
         logger.error(f"Job posting failed due to insufficient permissions in channel: {CHANNEL_ID}")
         return ConversationHandler.END
 
@@ -2630,7 +2631,7 @@ async def job_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "channel_id": CHANNEL_ID,
             "timestamp": datetime.now().isoformat()
         })
-        await update.message.reply_text("✅ Job posted successfully!")
+        await update.message.reply_text("✅ Job posted successfully!", reply_markup=ReplyKeyboardRemove())
         logger.info(f"Job posted successfully to channel {CHANNEL_ID}")
     except TelegramError as e:
         error_msg = f"❌ Failed to post job: {str(e)}"

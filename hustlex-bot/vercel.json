@@ -15,10 +15,6 @@
       "destination": "/register.html"
     },
     {
-      "source": "/freelancer-profile-setup",
-      "destination": "/freelancer-profile-setup.html"
-    },
-    {
       "source": "/job-details/:job_id",
       "destination": "/job-details.html"
     },

@@ -548,11 +548,6 @@ async def serve_register_page():
     html_path = Path(__file__).resolve().parent.parent / "register.html"
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"), status_code=200)
 
-@app.get("/freelancer-profile-setup", response_class=HTMLResponse)
-async def serve_profile_setup_page():
-    html_path = Path(__file__).resolve().parent.parent / "freelancer-profile-setup.html"
-    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), status_code=200)
-
 @app.get("/api/cv/{user_id}")
 async def get_cv(user_id: int):
     database = get_db()

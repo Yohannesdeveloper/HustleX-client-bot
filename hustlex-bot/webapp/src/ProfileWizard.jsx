@@ -46,6 +46,7 @@ export default function ProfileWizard(){
         }
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.sendData(JSON.stringify({ action: 'profile_complete' }));
+          setTimeout(() => { window.Telegram.WebApp.close(); }, 300);
         } else {
           window.location.href = 'https://hustlexet.vercel.app/job-listings';
         }
