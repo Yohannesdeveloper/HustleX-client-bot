@@ -462,12 +462,17 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
     if job_id:
         context.user_data["pending_job_id"] = job_id
 
-    # Check registration first
-    if user_id not in registered_users and not is_user_registered(user_id):
-        await show_registration_prompt(update, context)
-        return
+    # Check registration
+    if user_id not in registered_users:
+        if is_user_registered(user_id):
+            registered_users.add(user_id)
+        elif await check_registration_via_api(user_id):
+            registered_users.add(user_id)
+            register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        else:
+            await show_registration_prompt(update, context)
+            return
 
-    registered_users.add(user_id)
     if job_id:
         await send_job_details(update, context, job_id)
     else:
