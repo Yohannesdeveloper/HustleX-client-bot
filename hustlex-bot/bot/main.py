@@ -88,10 +88,16 @@ async def check_registration_via_api(user_id: int) -> bool:
     url = f"{WEBAPP_URL.rstrip('/')}/api/user/status?user_id={user_id}"
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=5) as resp:
+            async with session.get(url, timeout=10) as resp:
+                body = await resp.text()
+                logger.info(f"API /api/user/status for {user_id}: status={resp.status}, body={body}")
                 if resp.status == 200:
-                    data = await resp.json()
-                    return data.get("registered", False)
+                    try:
+                        data = json.loads(body)
+                        return data.get("registered", False)
+                    except Exception:
+                        return False
+                return False
     except Exception as e:
         logger.error(f"API registration check failed for {user_id}: {e}")
     return False

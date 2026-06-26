@@ -627,14 +627,26 @@ async def check_user_registration(user_id: int):
     """Check if a user is registered. Used by the bot as a fallback."""
     database = get_db()
     if database is None:
+        print(f"[user/status] DB unavailable for user {user_id}")
         return {"registered": False, "error": "DB unavailable"}
-    if database.registered_users.find_one({"user_id": user_id}):
-        return {"registered": True}
-    if database.profiles.find_one({"user_id": user_id}):
-        return {"registered": True}
-    if database.freelancer_profiles.find_one({"user_id": user_id}):
-        return {"registered": True}
-    return {"registered": False}
+    try:
+        found = bool(database.registered_users.find_one({"user_id": user_id}))
+        if found:
+            print(f"[user/status] User {user_id} found in registered_users")
+            return {"registered": True}
+        found = bool(database.profiles.find_one({"user_id": user_id}))
+        if found:
+            print(f"[user/status] User {user_id} found in profiles")
+            return {"registered": True}
+        found = bool(database.freelancer_profiles.find_one({"user_id": user_id}))
+        if found:
+            print(f"[user/status] User {user_id} found in freelancer_profiles")
+            return {"registered": True}
+        print(f"[user/status] User {user_id} NOT found in any collection")
+        return {"registered": False}
+    except Exception as e:
+        print(f"[user/status] Error checking user {user_id}: {e}")
+        return {"registered": False, "error": str(e)}
 
 @app.get("/Register", response_class=HTMLResponse)
 @app.get("/register", response_class=HTMLResponse)
