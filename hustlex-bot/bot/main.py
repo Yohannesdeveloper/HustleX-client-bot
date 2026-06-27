@@ -94,7 +94,7 @@ async def check_registration_via_api(user_id: int):
                         return data.get("registered", False)
                     except Exception:
                         return None
-                return False
+                return None
     except Exception as e:
         logger.error(f"API registration check failed for {user_id}: {e}")
     return None
@@ -2804,7 +2804,7 @@ async def handle_channel_member_update(update: Update, context: ContextTypes.DEF
         username = user.username or ""
         first_name = user.first_name or ""
 
-        if is_user_registered(user_id):
+        if is_user_registered(user_id) is True:
             logger.info(f"User {user_id} already registered, skipping channel join registration")
             return
 
