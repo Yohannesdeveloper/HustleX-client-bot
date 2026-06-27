@@ -708,10 +708,9 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     lang_code = user_languages.get(user_id, 'en')
     messages = MAIN_MENU_MESSAGES.get(lang_code, MAIN_MENU_MESSAGES['en'])
 
-    post_job_text = "📮 Post a Job"
     keyboard = [
-        [KeyboardButton(f"📋 {messages['applications']}"), KeyboardButton(f"👤 {messages['profile']}")],
-        [KeyboardButton(f"📮 Post a Job"), KeyboardButton(f"⚙️ {messages['settings']}")],
+        [KeyboardButton(f"📮 Post a Job"), KeyboardButton(f"📋 {messages['applications']}")],
+        [KeyboardButton(f"👤 {messages['profile']}"), KeyboardButton(f"⚙️ {messages['settings']}")],
         [KeyboardButton(f"ℹ️ {messages['about']}")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -719,16 +718,16 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     menu_text = (
         "🌐 https://hustlexet.vercel.app/\n\n"
         "Choose a tab:\n\n"
-        "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
-        "You're now in the *HustleX command center* — where freelancers become legends "
-        "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
-        "*⚔️ Your Arsenal:*\n"
-        f"📋 {messages['applications']} — Track your conquests, seal the deals\n"
-        f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
+        "🔥 *Welcome, Employer!* 🔥\n\n"
+        "You're in the *HustleX talent headquarters* — where top freelancers "
+        "are ready for your next project. Every click gets you closer to the perfect hire.\n\n"
+        "*⚔️ Your Tools:*\n"
         "📮 Post a Job — Find your next freelancer\n"
-        f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
-        f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
-        "Let's make moves. 🚀"
+        f"📋 {messages['applications']} — Review applicants, make hires\n"
+        f"👤 {messages['profile']} — Your company profile\n"
+        f"⚙️ {messages['settings']} — Manage your account\n"
+        f"ℹ️ {messages['about']} — Learn about HustleX\n\n"
+        "Let's find the talent you need. 🚀"
     )
 
     await bot.send_message(chat_id=chat_id or user_id, text=menu_text, reply_markup=reply_markup, parse_mode="Markdown")
