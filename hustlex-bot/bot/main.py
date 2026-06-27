@@ -3049,7 +3049,6 @@ def main():
     async def post_init(application):
         await application.bot.set_my_commands([
             BotCommand("start", "Menu"),
-            BotCommand("profile", "Manage your freelancer profile"),
         ])
         await application.bot.set_chat_menu_button(menu_button=MenuButtonCommands())
         # Start background callback poller for registration handoff
