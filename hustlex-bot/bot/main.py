@@ -394,18 +394,16 @@ async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYP
     if user_id in registered_users:
         return True
     api_ok = await check_registration_via_api(user_id)
-    if api_ok is True:
-        registered_users.add(user_id)
-        register_user(user_id, update.effective_user.username, update.effective_user.first_name)
-        return True
     db_ok = is_user_registered(user_id)
-    if db_ok is True:
+    if api_ok is True or db_ok is True:
         registered_users.add(user_id)
+        if api_ok is True:
+            register_user(user_id, update.effective_user.username, update.effective_user.first_name)
         return True
-    if api_ok is None or db_ok is None:
-        return True
-    await show_registration_prompt(update, context)
-    return False
+    if (api_ok is False and db_ok is not True) or (db_ok is False and api_ok is not True):
+        await show_registration_prompt(update, context)
+        return False
+    return True
 
 async def prompt_phone_share(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
