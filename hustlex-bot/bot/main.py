@@ -1134,11 +1134,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if action == 'menu':
         await menu_callback(update, context)
     elif action == 'post_job_telegram':
-        await post_job_start(update, context)
-    elif action == 'post_job_website':
-        # Post via website is a web app, but let's send a message
+        post_job_url = "https://hustlexet.vercel.app/post-job"
+        keyboard = [[InlineKeyboardButton("📮 Post a Job", web_app=WebAppInfo(url=post_job_url))]]
         await update.effective_message.reply_text(
-            "🌐 *Post Job via Website*\n\nPlease use the web app to post your job.",
+            "📮 *Post a Job*\n\nClick below to open the job posting form in HustleX:",
+            reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
     elif action == 'profile':
@@ -2786,7 +2786,7 @@ def main():
     job_post_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(post_job_start, pattern="^post_job_telegram$"),
                       CommandHandler("postjob", post_job_start),
-                      MessageHandler(filters.Regex(r'^📮 Post a Job$') | filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$'), post_job_start)],
+                      MessageHandler(filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$'), post_job_start)],
         states={
             JOB_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_title)],
             JOB_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_type)],
