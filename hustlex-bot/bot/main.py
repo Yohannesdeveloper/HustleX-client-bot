@@ -722,8 +722,8 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
         "You're now in the *HustleX command center* — where freelancers become legends "
         "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
         "*⚔️ Your Arsenal:*\n"
-        "📮 Post a Job — Find your next freelancer\n"
-        f"📋 {messages['applications']} — Review applicants, make hires\n"
+        "📮 Post a Job — Call the top 1% to your next mission\n"
+        f"📋 {messages['applications']} — Review your future legends, make the hire\n"
         "👤 Company Profile — Your company profile\n"
         f"⚙️ {messages['settings']} — Manage your account\n"
         f"ℹ️ {messages['about']} — Learn about HustleX\n\n"
@@ -1139,7 +1139,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         post_job_url = "https://hustlexet.vercel.app/post-job"
         keyboard = [[InlineKeyboardButton("📮 Post a Job", web_app=WebAppInfo(url=post_job_url))]]
         await update.effective_message.reply_text(
-            "📮 *Post a Job*\n\nClick below to open the job posting form in HustleX:",
+            "📮 *Post a Job*\n\n"
+            "A single job post is your **battle cry** — it calls out to the **top 1% of talent** "
+            "ready to build your vision. Every detail you add is a **filter**, every requirement a **magnet** "
+            "for the perfect freelancer.\n\n"
+            "This isn't just a listing — it's your **opportunity to be discovered** by the best in the game. "
+            "Post it like you mean it. 💼🔥",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
@@ -1160,8 +1165,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         applications_url = "https://hustlexet.vercel.app/applications-management"
         keyboard = [[InlineKeyboardButton("📋 Manage Applications", web_app=WebAppInfo(url=applications_url))]]
         await update.effective_message.reply_text(
-            "📋 *Applications Management*\n\n"
-            "Review applications from freelancers, shortlist candidates, and make hires.",
+            "📋 *Applications*\n\n"
+            "Your **command center** for finding the perfect freelancer. Every application is a **potential legend** "
+            "waiting to join your mission. Review, shortlist, and hire — all from your **throne room**.\n\n"
+            "The best talent is already knocking. Open the door. 🚀🔥",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
