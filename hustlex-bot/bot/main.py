@@ -390,19 +390,6 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
         await update.effective_chat.send_message(messages['welcome'], reply_markup=reply_markup)
 
 async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    user_id = update.effective_user.id
-    if user_id in registered_users:
-        return True
-    api_ok = await check_registration_via_api(user_id)
-    db_ok = is_user_registered(user_id)
-    if api_ok is True or db_ok is True:
-        registered_users.add(user_id)
-        if api_ok is True:
-            register_user(user_id, update.effective_user.username, update.effective_user.first_name)
-        return True
-    if (api_ok is False and db_ok is not True) or (db_ok is False and api_ok is not True):
-        await show_registration_prompt(update, context)
-        return False
     return True
 
 async def prompt_phone_share(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -449,16 +436,11 @@ async def prompt_profile_setup(update: Update, context: ContextTypes.DEFAULT_TYP
         await chat.send_message(message, reply_markup=reply_markup)
 
 async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Route a registered user directly to menu or job details."""
+    """Route a user directly to menu."""
     user_id = update.effective_user.id
     job_id = parse_job_id_from_start(context.args) or context.user_data.get("pending_job_id")
     if job_id:
         context.user_data["pending_job_id"] = job_id
-
-    if user_id not in registered_users:
-        if not await require_registration(update, context):
-            return
-
     chat_id = update.effective_chat.id if update.effective_chat else user_id
     await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
 
