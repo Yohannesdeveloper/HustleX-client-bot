@@ -136,6 +136,45 @@ def is_profile_setup_complete(user_id: int) -> bool:
         return False
     return bool(profile.get("name") and profile.get("age") and profile.get("sex"))
 
+def save_registration_prompt_msg(user_id: int, message_id: int, chat_id: int):
+    database = get_db()
+    if database is None:
+        return
+    try:
+        database.profiles.update_one(
+            {"user_id": user_id},
+            {"$set": {"registration_message_id": message_id, "registration_chat_id": chat_id}},
+            upsert=True
+        )
+        logger.info(f"Saved registration message {message_id} for user {user_id} in DB")
+    except Exception as e:
+        logger.error(f"Error saving registration prompt msg for {user_id}: {e}")
+
+def get_registration_prompt_msg(user_id: int):
+    database = get_db()
+    if database is None:
+        return None, None
+    try:
+        profile = database.profiles.find_one({"user_id": user_id}, {"registration_message_id": 1, "registration_chat_id": 1})
+        if profile:
+            return profile.get("registration_message_id"), profile.get("registration_chat_id")
+    except Exception as e:
+        logger.error(f"Error getting registration prompt msg for {user_id}: {e}")
+    return None, None
+
+def clear_registration_prompt_msg(user_id: int):
+    database = get_db()
+    if database is None:
+        return
+    try:
+        database.profiles.update_one(
+            {"user_id": user_id},
+            {"$unset": {"registration_message_id": "", "registration_chat_id": ""}}
+        )
+        logger.info(f"Cleared registration message mapping for user {user_id} in DB")
+    except Exception as e:
+        logger.error(f"Error clearing registration prompt msg for {user_id}: {e}")
+
 def parse_job_id_from_start(args) -> Optional[str]:
     if not args:
         return None
@@ -365,14 +404,14 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
         'en': {
             'welcome': (
                 "👋 *Welcome to HustleX!* 🚀\n\n"
-                "You stand at the gates of the **premier freelance kingdom** — where top 1% talent "
-                "meets world-class opportunities. But first, you need your **welcome papers**.\n\n"
-                "Registration takes **60 seconds** and unlocks:\n"
+                "You stand at the gates of the *premier freelance kingdom* — where top 1% talent "
+                "meets world-class opportunities. But first, you need your *welcome papers*.\n\n"
+                "Registration takes *60 seconds* and unlocks:\n"
                 "• 🎯 *Your Profile Throne* — Let clients discover your genius\n"
                 "• 📋 *Application Command Center* — Track every conquest\n"
                 "• ⚡ *Instant Apply* — One tap to your next big gig\n"
                 "• 🌟 *Verified Status* — Flex on the competition\n\n"
-                "This isn't just a sign-up — it's your **origin story**. 🦸\n\n"
+                "This isn't just a sign-up — it's your *origin story*. 🦸\n\n"
                 "👇 Tap below to begin your legend 👇"
             ),
             'register': "📝 Register Now — Join the Elite",
@@ -383,11 +422,25 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
     register_url = f"{WEBAPP_URL.rstrip('/')}/Register?cb={cache_buster}"
     keyboard = [[InlineKeyboardButton(messages['register'], web_app=WebAppInfo(url=register_url))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    target = update.effective_message or update.effective_chat
+    
+    sent_message = None
     if update.effective_message:
-        await update.effective_message.reply_text(messages['welcome'], reply_markup=reply_markup)
+        sent_message = await update.effective_message.reply_text(
+            messages['welcome'],
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
     else:
-        await update.effective_chat.send_message(messages['welcome'], reply_markup=reply_markup)
+        sent_message = await update.effective_chat.send_message(
+            messages['welcome'],
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+
+    if sent_message:
+        context.user_data["registration_message_id"] = sent_message.message_id
+        context.user_data["registration_chat_id"] = sent_message.chat.id
+        save_registration_prompt_msg(user_id, sent_message.message_id, sent_message.chat.id)
 
 async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check registration. Only blocks if BOTH checks definitively say False."""
@@ -400,6 +453,22 @@ async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYP
         registered_users.add(user_id)
         if api_result is True:
             register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        
+        # Delete registration prompt if it exists
+        msg_id, chat_id = get_registration_prompt_msg(user_id)
+        if not msg_id or not chat_id:
+            msg_id = context.user_data.get("registration_message_id")
+            chat_id = context.user_data.get("registration_chat_id")
+        if msg_id and chat_id:
+            try:
+                await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                logger.info(f"Deleted registration message {msg_id} for user {user_id} in require_registration")
+            except Exception as e:
+                logger.warning(f"Could not delete registration message: {e}")
+            clear_registration_prompt_msg(user_id)
+            context.user_data.pop("registration_message_id", None)
+            context.user_data.pop("registration_chat_id", None)
+
         return True
     if api_result is False and db_result is False:
         logger.warning(f"User {user_id} NOT registered (API=False, DB=False)")
@@ -469,6 +538,22 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
     if registered:
         registered_users.add(user_id)
         register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        
+        # Delete registration prompt if it exists
+        msg_id, chat_id = get_registration_prompt_msg(user_id)
+        if not msg_id or not chat_id:
+            msg_id = context.user_data.get("registration_message_id")
+            chat_id = context.user_data.get("registration_chat_id")
+        if msg_id and chat_id:
+            try:
+                await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                logger.info(f"Deleted registration message {msg_id} for user {user_id} in route_registered_user")
+            except Exception as e:
+                logger.warning(f"Could not delete registration message: {e}")
+            clear_registration_prompt_msg(user_id)
+            context.user_data.pop("registration_message_id", None)
+            context.user_data.pop("registration_chat_id", None)
+
         chat_id = update.effective_chat.id if update.effective_chat else user_id
         await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
 
@@ -492,6 +577,22 @@ async def register_complete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     registered_users.add(user_id)
+
+    # Delete registration prompt if it exists
+    msg_id, chat_id = get_registration_prompt_msg(user_id)
+    if not msg_id or not chat_id:
+        msg_id = context.user_data.get("registration_message_id")
+        chat_id = context.user_data.get("registration_chat_id")
+    if msg_id and chat_id:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            logger.info(f"Deleted registration message {msg_id} for user {user_id} in register_complete")
+        except Exception as e:
+            logger.warning(f"Could not delete registration message for user {user_id}: {e}")
+        clear_registration_prompt_msg(user_id)
+        context.user_data.pop("registration_message_id", None)
+        context.user_data.pop("registration_chat_id", None)
+
     await post_registration_to_channel(context, user_id, username or "")
     chat_id = update.effective_chat.id if update.effective_chat else user_id
     await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
@@ -660,7 +761,8 @@ def verify_registration_callback(payload: dict) -> bool:
     expected = hmac.new(REGISTRATION_SECRET.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, sig)
 
-async def check_registration_callbacks(bot):
+async def check_registration_callbacks(app):
+    bot = app.bot
     database = get_db()
     if database is None:
         return
@@ -704,6 +806,25 @@ async def check_registration_callbacks(bot):
         register_user(user_id, None, None)
         logger.info(f"Auto-registered user {user_id} via callback poller")
 
+        # Delete registration prompt if it exists
+        msg_id, chat_id = get_registration_prompt_msg(user_id)
+        if not msg_id or not chat_id:
+            user_data = app.user_data.get(user_id)
+            if user_data:
+                msg_id = user_data.get("registration_message_id")
+                chat_id = user_data.get("registration_chat_id")
+        if msg_id and chat_id:
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                logger.info(f"Deleted registration message {msg_id} for user {user_id} via poller")
+            except Exception as e:
+                logger.warning(f"Could not delete registration message for user {user_id} via poller: {e}")
+            clear_registration_prompt_msg(user_id)
+            user_data = app.user_data.get(user_id)
+            if user_data:
+                user_data.pop("registration_message_id", None)
+                user_data.pop("registration_chat_id", None)
+
         # Send dedicated success message with profile details, then main menu
         try:
             profile = None
@@ -741,7 +862,7 @@ async def _callback_poller_loop(app):
     await asyncio.sleep(5)
     while True:
         try:
-            await check_registration_callbacks(app.bot)
+            await check_registration_callbacks(app)
         except Exception as e:
             logger.error(f"Callback poller error: {e}")
         await asyncio.sleep(3)
@@ -782,6 +903,22 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 first_name = update.effective_user.first_name
                 registered_users.add(user_id)
                 register_user(user_id, username, first_name)
+
+                # Delete registration prompt if it exists
+                msg_id, chat_id = get_registration_prompt_msg(user_id)
+                if not msg_id or not chat_id:
+                    msg_id = context.user_data.get("registration_message_id")
+                    chat_id = context.user_data.get("registration_chat_id")
+                if msg_id and chat_id:
+                    try:
+                        await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                        logger.info(f"Deleted registration message {msg_id} for user {user_id} in handle_web_app_data")
+                    except Exception as e:
+                        logger.warning(f"Could not delete registration message: {e}")
+                    clear_registration_prompt_msg(user_id)
+                    context.user_data.pop("registration_message_id", None)
+                    context.user_data.pop("registration_chat_id", None)
+
                 await post_registration_to_channel(context, user_id, username or "")
                 chat_id = update.effective_chat.id if update.effective_chat else user_id
                 await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
