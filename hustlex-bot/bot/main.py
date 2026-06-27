@@ -447,12 +447,13 @@ async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYP
     user_id = update.effective_user.id
     if user_id in registered_users:
         return True
-    api_result = await check_registration_via_api(user_id)
+    
     db_result = is_user_registered(user_id)
-    if api_result is True or db_result is True:
+    api_result = await check_registration_via_api(user_id)
+    
+    if db_result is True or api_result is True:
         registered_users.add(user_id)
-        if api_result is True:
-            register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        register_user(user_id, update.effective_user.username, update.effective_user.first_name)
         
         # Delete registration prompt if it exists
         msg_id, chat_id = get_registration_prompt_msg(user_id)
@@ -470,12 +471,13 @@ async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYP
             context.user_data.pop("registration_chat_id", None)
 
         return True
-    if api_result is False and db_result is False:
-        logger.warning(f"User {user_id} NOT registered (API=False, DB=False)")
+    elif db_result is False or api_result is False:
+        logger.warning(f"User {user_id} NOT registered (API={api_result}, DB={db_result})")
         await show_registration_prompt(update, context)
         return False
-    logger.info(f"User {user_id}: check errored, assuming registered")
-    return True
+    else:
+        logger.info(f"User {user_id}: check errored, assuming registered")
+        return True
 
 async def prompt_phone_share(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -526,15 +528,21 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
     job_id = parse_job_id_from_start(context.args) or context.user_data.get("pending_job_id")
     if job_id:
         context.user_data["pending_job_id"] = job_id
+    
     registered = user_id in registered_users
     if not registered:
-        api_result = await check_registration_via_api(user_id)
         db_result = is_user_registered(user_id)
-        if api_result is True or db_result is True:
+        api_result = await check_registration_via_api(user_id)
+        
+        if db_result is True or api_result is True:
             registered = True
-        elif api_result is False and db_result is False:
+        elif db_result is False or api_result is False:
             await show_registration_prompt(update, context)
             return
+        else:
+            # Both returned None (infrastructure error)
+            registered = True
+            
     if registered:
         registered_users.add(user_id)
         register_user(user_id, update.effective_user.username, update.effective_user.first_name)
