@@ -1147,7 +1147,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         profile_url = "https://hustlexet.vercel.app/company-profile"
         keyboard = [[InlineKeyboardButton("👤 Open Company Profile", web_app=WebAppInfo(url=profile_url))]]
         await update.effective_message.reply_text(
-            "👤 *Company Profile*\n\nManage your company profile and showcase your business to freelancers.",
+            "👤 *Company Profile*\n\n"
+            "Your company profile is your **digital fortress** — it's where freelancers decide if you're the real deal. "
+            "A powerful profile doesn't just look good; it **attracts the top 1%**, builds **instant trust**, "
+            "and turns browsers into believers.\n\n"
+            "This isn't just a page — it's your **first impression**, your **credibility**, and your **secret weapon** "
+            "in the war for top talent. Make it count. 🏢🔥",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
@@ -2726,7 +2731,7 @@ def main():
     async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         profile_url = "https://hustlexet.vercel.app/company-profile"
         await update.effective_message.reply_text(
-            f"👤 *Company Profile*\n\nManage your company profile and showcase your business to freelancers.",
+            f"👤 *Company Profile*\n\nYour digital fortress — build your company profile and attract top 1% freelancers.",
             parse_mode="Markdown"
         )
 
