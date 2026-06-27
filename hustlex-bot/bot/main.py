@@ -716,18 +716,20 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-    menu_text = ""
-    menu_text += f"{messages['title']}\n\n"
-    menu_text += "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
-    menu_text += "You're now in the *HustleX command center* — where freelancers become legends "\
-                 "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
-    menu_text += "*⚔️ Your Arsenal:*\n"
-    menu_text += f"📋 {messages['applications']} — Track your conquests, seal the deals\n"
-    menu_text += f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
-    menu_text += f"📮 Post a Job — Find your next freelancer\n"
-    menu_text += f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
-    menu_text += f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
-    menu_text += "Let's make moves. 🚀"
+    menu_text = (
+        "🌐 https://hustlexet.vercel.app/\n\n"
+        "Choose a tab:\n\n"
+        "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
+        "You're now in the *HustleX command center* — where freelancers become legends "
+        "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
+        "*⚔️ Your Arsenal:*\n"
+        f"📋 {messages['applications']} — Track your conquests, seal the deals\n"
+        f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
+        "📮 Post a Job — Find your next freelancer\n"
+        f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
+        f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
+        "Let's make moves. 🚀"
+    )
 
     await bot.send_message(chat_id=chat_id or user_id, text=menu_text, reply_markup=reply_markup, parse_mode="Markdown")
 
