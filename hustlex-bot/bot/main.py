@@ -61,30 +61,27 @@ def get_db():
         logger.error(f"Failed to connect to MongoDB: {e}")
         return None
 
-def is_user_registered(user_id: int) -> bool:
-    """Check if user completed registration in MongoDB."""
+def is_user_registered(user_id: int):
+    """Check if user completed registration in MongoDB. Returns True/False or None on error."""
     database = get_db()
     if database is None:
         logger.warning(f"is_user_registered({user_id}): get_db() returned None")
-        return False
+        return None
     try:
-        # Check registered_users collection (primary)
         if database.registered_users.find_one({"user_id": user_id}):
             return True
-        # Check profiles collection (legacy /api/profile saves here)
         if database.profiles.find_one({"user_id": user_id}):
             return True
-        # Check freelancer_profiles collection (/api/freelancer-profile saves here)
         if database.freelancer_profiles.find_one({"user_id": user_id}):
             return True
         logger.info(f"is_user_registered({user_id}): not found in any MongoDB collection")
         return False
     except Exception as e:
         logger.error(f"Error checking user registration for {user_id}: {e}")
-        return False
+        return None
 
-async def check_registration_via_api(user_id: int) -> bool:
-    """Fallback: check registration via the API (Vercel) when direct MongoDB check fails."""
+async def check_registration_via_api(user_id: int):
+    """Fallback: check registration via the API (Vercel). Returns True/False or None on error."""
     url = f"{WEBAPP_URL.rstrip('/')}/api/user/status?user_id={user_id}"
     try:
         async with aiohttp.ClientSession() as session:
@@ -96,11 +93,11 @@ async def check_registration_via_api(user_id: int) -> bool:
                         data = json.loads(body)
                         return data.get("registered", False)
                     except Exception:
-                        return False
+                        return None
                 return False
     except Exception as e:
         logger.error(f"API registration check failed for {user_id}: {e}")
-    return False
+    return None
 
 def get_user_profile(user_id: int):
     database = get_db()
@@ -394,23 +391,19 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
 
 async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
-    # Check in-memory set first (fastest)
     if user_id in registered_users:
         return True
-    # Check via API (most reliable — uses Vercel's DB connection)
     api_ok = await check_registration_via_api(user_id)
-    if api_ok:
-        logger.info(f"User {user_id} confirmed registered via API")
+    if api_ok is True:
         registered_users.add(user_id)
         register_user(user_id, update.effective_user.username, update.effective_user.first_name)
         return True
-    # Fallback: direct MongoDB check
     db_ok = is_user_registered(user_id)
-    if db_ok:
-        logger.info(f"User {user_id} confirmed registered via direct MongoDB")
+    if db_ok is True:
         registered_users.add(user_id)
         return True
-    logger.warning(f"User {user_id} NOT registered (API={api_ok}, DB={db_ok})")
+    if api_ok is None or db_ok is None:
+        return True
     await show_registration_prompt(update, context)
     return False
 
@@ -465,11 +458,8 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
         context.user_data["pending_job_id"] = job_id
 
     if user_id not in registered_users:
-        if is_user_registered(user_id):
-            registered_users.add(user_id)
-        elif await check_registration_via_api(user_id):
-            registered_users.add(user_id)
-            register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        if not await require_registration(update, context):
+            return
 
     chat_id = update.effective_chat.id if update.effective_chat else user_id
     await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
@@ -643,6 +633,8 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
 # ---------------------------
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    if not await require_registration(update, context):
+        return
     first_name = update.effective_user.first_name or ""
     profile_just_completed = context.user_data.pop('_profile_just_completed', False)
     chat_id = update.effective_chat.id if update.effective_chat else user_id
@@ -1007,6 +999,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if action is None:
         return
+
+    if action in ('profile', 'applications', 'about', 'settings', 'settings_languages', 'settings_account', 'settings_cv', 'settings_terms', 'account_view_profile', 'account_notifications', 'account_delete', 'cv_view', 'cv_upload', 'cv_remove', 'terms_privacy'):
+        if not await require_registration(update, context):
+            return
     
     if action == 'menu':
         await menu_callback(update, context)
