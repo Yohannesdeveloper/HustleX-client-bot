@@ -452,19 +452,23 @@ async def prompt_profile_setup(update: Update, context: ContextTypes.DEFAULT_TYP
         await chat.send_message(message, reply_markup=reply_markup)
 
 async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Route a user directly to menu."""
+    """Check registration and route user."""
     user_id = update.effective_user.id
     job_id = parse_job_id_from_start(context.args) or context.user_data.get("pending_job_id")
     if job_id:
         context.user_data["pending_job_id"] = job_id
-    if user_id not in registered_users:
-        if is_user_registered(user_id):
-            registered_users.add(user_id)
-        elif await check_registration_via_api(user_id):
-            registered_users.add(user_id)
-            register_user(user_id, update.effective_user.username, update.effective_user.first_name)
-    chat_id = update.effective_chat.id if update.effective_chat else user_id
-    await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
+    registered = user_id in registered_users
+    if not registered:
+        registered = await check_registration_via_api(user_id)
+    if not registered:
+        registered = is_user_registered(user_id)
+    if registered:
+        registered_users.add(user_id)
+        register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        chat_id = update.effective_chat.id if update.effective_chat else user_id
+        await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
+    else:
+        await show_registration_prompt(update, context)
 
 # ---------------------------
 # /register_complete command
