@@ -1162,39 +1162,29 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     elif action == 'applications':
-        user_id = update.effective_user.id
-        applications_url = f"https://hustlexet.vercel.app/my-applications?user_id={user_id}"
-        keyboard = [[InlineKeyboardButton("📋 Open Applications", web_app=WebAppInfo(url=applications_url))]]
+        applications_url = "https://hustlexet.vercel.app/applications-management"
+        keyboard = [[InlineKeyboardButton("📋 Manage Applications", web_app=WebAppInfo(url=applications_url))]]
         await update.effective_message.reply_text(
-            "📋 *Your Applications Command Center*\n\n"
-            "This is where **opportunities meet their match** — every application is a **battle won** "
-            "before the war even starts. You don't just apply; you **dominate**.\n\n"
-            "Track your conquests:\n"
-            "• 🎯 **Live Status** — Know exactly where you stand\n"
-            "• ⚡ **Instant Replies** — Clients move at the speed of trust\n"
-            "• 📊 **Win Rate** — Watch your hit rate climb\n"
-            "• 🔔 **Smart Alerts** — Never miss a callback\n\n"
-            "Every 'Submitted' is a **step closer to your empire**. "
-            "Every 'Accepted' is a **crown on your legacy**.\n\n"
-            "Let's go get that bag 💼🔥",
+            "📋 *Applications Management*\n\n"
+            "Review applications from freelancers, shortlist candidates, and make hires.",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
     elif action == 'about':
         about_text = (
             "🚀 *About HustleX*\n\n"
-            "Welcome to *HustleX* – where *ambition meets opportunity!* ✨\n\n"
-            "At HustleX, we believe talent has *no limits* 🌍. Whether you’re a designer 🎨, "
-            "developer 💻, writer ✍️, or digital wizard 🪄, we connect skilled freelancers with "
-            "clients who value *quality, creativity, and reliability*.\n\n"
-            "*Our mission:* 💪 Elevate projects 📈 Transform careers 🌟\n\n"
+            "Welcome to *HustleX* – the smartest way to find and hire top freelancers! ✨\n\n"
+            "At HustleX, we connect *ambitious employers* with *skilled talent* 🌍. "
+            "Whether you need a designer 🎨, developer 💻, writer ✍️, or digital expert 🪄, "
+            "we've got you covered.\n\n"
+            "*Our mission:* 💪 Elevate projects 📈 Grow your business 🌟\n\n"
             "*Why HustleX?*\n"
-            "- *Seamless Experience:* Navigate your freelance journey effortlessly ⚡\n"
-            "- *Trusted Connections:* Work with verified clients and freelancers 🤝\n"
-            "- *Smart Tools:* Manage profiles, applications, and projects—all in Telegram 📲\n"
-            "- *Growth-Focused:* Showcase your skills, build your reputation, and level up 🚀\n\n"
-            "Join *HustleX* today and turn your skills into opportunities! 🔥 "
-            "Because here, *every hustle counts* 💼💎"
+            "- *Seamless Hiring:* Post jobs and review applicants effortlessly ⚡\n"
+            "- *Trusted Talent:* Work with verified freelancers 🤝\n"
+            "- *Smart Tools:* Manage job posts and applications — all in Telegram 📲\n"
+            "- *Quality-Focused:* Find the right talent for your project 🚀\n\n"
+            "Join *HustleX* today and find the talent your business deserves! 🔥 "
+            "Because here, *every hire counts* 💼💎"
         )
         await update.effective_message.reply_text(about_text, parse_mode="Markdown", reply_markup=ReplyKeyboardRemove())
     elif action == 'settings':
@@ -1332,18 +1322,18 @@ async def applications_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def about_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     about_text = (
         "🚀 *About HustleX*\n\n"
-        "Welcome to *HustleX* – where *ambition meets opportunity!* ✨\n\n"
-        "At HustleX, we believe talent has *no limits* 🌍. Whether you're a designer 🎨, "
-        "developer 💻, writer ✍️, or digital wizard 🪄, we connect skilled freelancers with "
-        "clients who value *quality, creativity, and reliability*.\n\n"
-        "*Our mission:* 💪 Elevate projects 📈 Transform careers 🌟\n\n"
+        "Welcome to *HustleX* – the smartest way to find and hire top freelancers! ✨\n\n"
+        "At HustleX, we connect *ambitious employers* with *skilled talent* 🌍. "
+        "Whether you need a designer 🎨, developer 💻, writer ✍️, or digital expert 🪄, "
+        "we've got you covered.\n\n"
+        "*Our mission:* 💪 Elevate projects 📈 Grow your business 🌟\n\n"
         "*Why HustleX?*\n"
-        "- *Seamless Experience:* Navigate your freelance journey effortlessly ⚡\n"
-        "- *Trusted Connections:* Work with verified clients and freelancers 🤝\n"
-        "- *Smart Tools:* Manage profiles, applications, and projects—all in Telegram 📲\n"
-        "- *Growth-Focused:* Showcase your skills, build your reputation, and level up 🚀\n\n"
-        "Join *HustleX* today and turn your skills into opportunities! 🔥 "
-        "Because here, *every hustle counts* 💼💎"
+        "- *Seamless Hiring:* Post jobs and review applicants effortlessly ⚡\n"
+        "- *Trusted Talent:* Work with verified freelancers 🤝\n"
+        "- *Smart Tools:* Manage job posts and applications — all in Telegram 📲\n"
+        "- *Quality-Focused:* Find the right talent for your project 🚀\n\n"
+        "Join *HustleX* today and find the talent your business deserves! 🔥 "
+        "Because here, *every hire counts* 💼💎"
     )
     if update.callback_query:
         q = update.callback_query
