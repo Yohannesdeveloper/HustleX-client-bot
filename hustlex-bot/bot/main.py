@@ -710,7 +710,7 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
 
     keyboard = [
         [KeyboardButton(f"📮 Post a Job"), KeyboardButton(f"📋 {messages['applications']}")],
-        [KeyboardButton(f"👤 {messages['profile']}"), KeyboardButton(f"⚙️ {messages['settings']}")],
+        [KeyboardButton(f"👤 Company Profile"), KeyboardButton(f"⚙️ {messages['settings']}")],
         [KeyboardButton(f"ℹ️ {messages['about']}")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -724,7 +724,7 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
         "*⚔️ Your Tools:*\n"
         "📮 Post a Job — Find your next freelancer\n"
         f"📋 {messages['applications']} — Review applicants, make hires\n"
-        f"👤 {messages['profile']} — Your company profile\n"
+        "👤 Company Profile — Your company profile\n"
         f"⚙️ {messages['settings']} — Manage your account\n"
         f"ℹ️ {messages['about']} — Learn about HustleX\n\n"
         "Let's find the talent you need. 🚀"
@@ -964,6 +964,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Start menu
         'Profile': 'profile',
         '👤 Profile': 'profile',
+        '👤 Company Profile': 'profile',
         'Perfil': 'profile',
         '👤 Perfil': 'profile',
         'Profil': 'profile',
@@ -1143,21 +1144,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     elif action == 'profile':
-        job_id = get_pending_job_id(context)
-        profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={job_id}"
-        keyboard = [[InlineKeyboardButton("👤 Open Profile", web_app=WebAppInfo(url=profile_url))]]
+        profile_url = "https://hustlexet.vercel.app/company-profile"
+        keyboard = [[InlineKeyboardButton("👤 Open Company Profile", web_app=WebAppInfo(url=profile_url))]]
         await update.effective_message.reply_text(
-            "👤 *Your Profile Arsenal*\n\n"
-            "Your profile is your **digital throne** — the kingdom where clients discover your genius. "
-            "It's not just a page; it's your **24/7 sales machine**, your **silent pitch**, and the "
-            "difference between \"maybe\" and \"hired.\"\n\n"
-            "A complete profile = **3× more invites**, **5× more trust**, and clients fighting to work with you.\n\n"
-            "What awaits you inside:\n"
-            "• 🎯 **Battle Station** — Showcase skills that slay\n"
-            "• 🌟 **Epic Portfolio** — Let your work do the talkin'\n"
-            "• 📊 **Verified Badges** — Flex your credibility\n"
-            "• 🚀 **Instant Apply** — One tap to your next gig\n\n"
-            "This isn't just a profile — it's your **legacy in the making** 👑",
+            "👤 *Company Profile*\n\nManage your company profile and showcase your business to freelancers.",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
@@ -2734,10 +2724,9 @@ def main():
     app.add_error_handler(error_handler)
 
     async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        # Show profile URL as clickable link
-        profile_url = "https://hustlexet.vercel.app/freelancer-profile-setup"
+        profile_url = "https://hustlexet.vercel.app/company-profile"
         await update.effective_message.reply_text(
-            f"👤 *Profile*\n\nClick here to access your profile: {profile_url}",
+            f"👤 *Company Profile*\n\nClick here to access your company profile: {profile_url}",
             parse_mode="Markdown"
         )
 
