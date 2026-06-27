@@ -112,6 +112,16 @@ def get_user_profile(user_id: int):
         logger.error(f"Error loading profile for {user_id}: {e}")
         return None
 
+def get_freelancer_profile_data(user_id: int):
+    database = get_db()
+    if database is None:
+        return None
+    try:
+        return database.freelancer_profiles.find_one({"user_id": user_id}, {"_id": 0})
+    except Exception as e:
+        logger.error(f"Error loading freelancer profile for {user_id}: {e}")
+        return None
+
 def has_user_phone(user_id: int) -> bool:
     profile = get_user_profile(user_id)
     if not profile:
@@ -1019,24 +1029,33 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     elif action == 'profile':
-        job_id = get_pending_job_id(context)
-        profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={job_id}"
-        keyboard = [[InlineKeyboardButton("👤 Open Profile", web_app=WebAppInfo(url=profile_url))]]
-        await update.effective_message.reply_text(
-            "👤 *Your Profile Arsenal*\n\n"
-            "Your profile is your **digital throne** — the kingdom where clients discover your genius. "
-            "It's not just a page; it's your **24/7 sales machine**, your **silent pitch**, and the "
-            "difference between \"maybe\" and \"hired.\"\n\n"
-            "A complete profile = **3× more invites**, **5× more trust**, and clients fighting to work with you.\n\n"
-            "What awaits you inside:\n"
-            "• 🎯 **Battle Station** — Showcase skills that slay\n"
-            "• 🌟 **Epic Portfolio** — Let your work do the talkin'\n"
-            "• 📊 **Verified Badges** — Flex your credibility\n"
-            "• 🚀 **Instant Apply** — One tap to your next gig\n\n"
-            "This isn't just a profile — it's your **legacy in the making** 👑",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
+        user_id = update.effective_user.id
+        profile = get_freelancer_profile_data(user_id)
+        if profile and profile.get('full_name'):
+            info = f"👤 *{profile['full_name']}*"
+            if profile.get('headline'):
+                info += f"\n*{profile['headline']}*"
+            if profile.get('email'):
+                info += f"\n📧 {profile['email']}"
+            if profile.get('phone'):
+                info += f"\n📞 {profile['phone']}"
+            if profile.get('country'):
+                info += f"\n🌍 {profile['country']}"
+            if profile.get('primary_skills'):
+                skills = ', '.join(profile['primary_skills']) if isinstance(profile['primary_skills'], list) else profile['primary_skills']
+                info += f"\n🛠 *Skills:* {skills}"
+            if profile.get('availability'):
+                info += f"\n⏰ {profile['availability'].title()}"
+            if profile.get('work_type'):
+                info += f"\n🏢 {profile['work_type'].title()}"
+            if profile.get('short_bio'):
+                info += f"\n\n*Bio:* {profile['short_bio']}"
+            info += "\n\n✅ *Profile saved* — tap below to edit"
+        else:
+            info = "👤 *Profile*\n\nNo saved profile yet. Tap below to set up your freelancer profile."
+        profile_url = f"{WEBAPP_URL.rstrip('/')}/freelancer-profile-setup?job_id={get_pending_job_id(context)}"
+        keyboard = [[InlineKeyboardButton("✏️ Edit Profile", web_app=WebAppInfo(url=profile_url))]]
+        await update.effective_message.reply_text(info, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     elif action == 'applications':
         user_id = update.effective_user.id
         applications_url = f"https://hustlexet.vercel.app/my-applications?user_id={user_id}"
