@@ -61,12 +61,12 @@ def get_db():
         logger.error(f"Failed to connect to MongoDB: {e}")
         return None
 
-def is_user_registered(user_id: int):
-    """Check if user completed registration in MongoDB. Returns True/False or None on error."""
+def is_user_registered(user_id: int) -> bool:
+    """Check if user completed registration in MongoDB."""
     database = get_db()
     if database is None:
         logger.warning(f"is_user_registered({user_id}): get_db() returned None")
-        return None
+        return False
     try:
         if database.registered_users.find_one({"user_id": user_id}):
             return True
@@ -78,10 +78,10 @@ def is_user_registered(user_id: int):
         return False
     except Exception as e:
         logger.error(f"Error checking user registration for {user_id}: {e}")
-        return None
+        return False
 
-async def check_registration_via_api(user_id: int):
-    """Fallback: check registration via the API (Vercel). Returns True/False or None on error."""
+async def check_registration_via_api(user_id: int) -> bool:
+    """Fallback: check registration via the API (Vercel) when direct MongoDB check fails."""
     url = f"{WEBAPP_URL.rstrip('/')}/api/user/status?user_id={user_id}"
     try:
         async with aiohttp.ClientSession() as session:
@@ -93,11 +93,11 @@ async def check_registration_via_api(user_id: int):
                         data = json.loads(body)
                         return data.get("registered", False)
                     except Exception:
-                        return None
-                return None
+                        return False
+                return False
     except Exception as e:
         logger.error(f"API registration check failed for {user_id}: {e}")
-    return None
+    return False
 
 def get_user_profile(user_id: int):
     database = get_db()
@@ -390,7 +390,23 @@ async def show_registration_prompt(update: Update, context: ContextTypes.DEFAULT
         await update.effective_chat.send_message(messages['welcome'], reply_markup=reply_markup)
 
 async def require_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    return True
+    user_id = update.effective_user.id
+    if user_id in registered_users:
+        return True
+    api_ok = await check_registration_via_api(user_id)
+    if api_ok:
+        logger.info(f"User {user_id} confirmed registered via API")
+        registered_users.add(user_id)
+        register_user(user_id, update.effective_user.username, update.effective_user.first_name)
+        return True
+    db_ok = is_user_registered(user_id)
+    if db_ok:
+        logger.info(f"User {user_id} confirmed registered via direct MongoDB")
+        registered_users.add(user_id)
+        return True
+    logger.warning(f"User {user_id} NOT registered (API={api_ok}, DB={db_ok})")
+    await show_registration_prompt(update, context)
+    return False
 
 async def prompt_phone_share(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -441,6 +457,12 @@ async def route_registered_user(update: Update, context: ContextTypes.DEFAULT_TY
     job_id = parse_job_id_from_start(context.args) or context.user_data.get("pending_job_id")
     if job_id:
         context.user_data["pending_job_id"] = job_id
+    if user_id not in registered_users:
+        if is_user_registered(user_id):
+            registered_users.add(user_id)
+        elif await check_registration_via_api(user_id):
+            registered_users.add(user_id)
+            register_user(user_id, update.effective_user.username, update.effective_user.first_name)
     chat_id = update.effective_chat.id if update.effective_chat else user_id
     await send_main_menu_to_user(context.bot, user_id, chat_id=chat_id)
 
@@ -2784,7 +2806,7 @@ async def handle_channel_member_update(update: Update, context: ContextTypes.DEF
         username = user.username or ""
         first_name = user.first_name or ""
 
-        if is_user_registered(user_id) is True:
+        if is_user_registered(user_id):
             logger.info(f"User {user_id} already registered, skipping channel join registration")
             return
 
