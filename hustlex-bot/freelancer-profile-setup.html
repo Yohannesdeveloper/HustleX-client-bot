@@ -327,6 +327,30 @@
 
     let expIndex = 0, eduIndex = 0, portIndex = 0, certIndex = 0;
     let existingProfile = null;
+    const DRAFT_KEY = 'hustlex_profile_draft';
+
+    function autoSave() {
+      const data = {};
+      document.querySelectorAll('#profileForm input, #profileForm select, #profileForm textarea').forEach(el => {
+        if (el.name) data[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    }
+
+    function restoreDraft() {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        Object.entries(data).forEach(([name, val]) => {
+          const el = document.querySelector(`[name="${name}"]`);
+          if (el) {
+            if (el.type === 'checkbox') el.checked = val;
+            else el.value = val;
+          }
+        });
+      } catch (e) {}
+    }
 
     async function loadExistingProfile() {
       if (!tg || !tg.initData) return;
@@ -370,7 +394,7 @@
         console.warn('Failed to load existing profile:', e);
       }
     }
-    loadExistingProfile();
+    loadExistingProfile().finally(() => restoreDraft());
 
     function addExperience(data) {
       const i = expIndex++;
@@ -496,6 +520,10 @@
     const formContainer = document.getElementById('formContainer');
     const successScreen = document.getElementById('successScreen');
 
+    // Auto-save form on any change
+    form.addEventListener('input', autoSave);
+    form.addEventListener('change', autoSave);
+
     function validateForm() {
       const fullName = form.querySelector('[name="full_name"]').value.trim();
       if (!fullName) return 'Full Name is required.';
@@ -571,6 +599,7 @@
         const data = await response.json();
 
         if (response.ok) {
+          localStorage.removeItem(DRAFT_KEY);
           formContainer.style.display = 'none';
           successScreen.style.display = 'block';
           // Wait for Telegram message confirmation, then close
