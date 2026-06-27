@@ -17,6 +17,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 from telegram.error import TelegramError
 from urllib.parse import urlparse
 import aiohttp
+import io
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
@@ -210,6 +211,20 @@ def register_user(user_id: int, username: str = None, first_name: str = None) ->
         logger.error(f"Error registering user: {e}")
         return False
 
+def get_user_cv(user_id: int):
+    database = get_db()
+    if database is None:
+        return None
+    try:
+        profile = database.profiles.find_one(
+            {"user_id": user_id},
+            {"cv_file_data": 1, "cv_filename": 1, "cv_mime_type": 1}
+        )
+        return profile
+    except Exception as e:
+        logger.error(f"Error loading CV for {user_id}: {e}")
+        return None
+
 def save_profile_fields(user_id: int, fields: dict) -> bool:
     database = get_db()
     if database is None:
@@ -307,6 +322,7 @@ def delete_user(user_id: int) -> bool:
             database.registered_users.delete_one({"user_id": user_id})
             database.profiles.delete_one({"user_id": user_id})
         registered_users.discard(user_id)
+        user_cvs.pop(user_id, None)
         user_languages.pop(user_id, None)
         user_profiles.pop(user_id, None)
         user_posts.pop(user_id, None)
@@ -316,7 +332,8 @@ def delete_user(user_id: int) -> bool:
         success = False
     return success
 
-# Simple in-memory storage for user preferences (replace with database in production)
+# Simple in-memory storage for CV data and user preferences (replace with database in production)
+user_cvs = {}
 user_languages = {}
 user_profiles = {}
 user_posts = {}  # Stores user posts: {user_id: [{"message_id": 123, "title": "Job Title", ...}]}
@@ -628,7 +645,7 @@ MAIN_MENU_MESSAGES = {
     'en': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nChoose a tab:",
         'profile': "Profile",
-        'profile_desc': "Manage your freelancer profile",
+        'profile_desc': "Manage your freelancer profile and CV",
         'applications': "Applications",
         'applications_desc': "View and manage your job applications",
         'about': "About HustleX",
@@ -639,7 +656,7 @@ MAIN_MENU_MESSAGES = {
     'es': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nElige una pestaña:",
         'profile': "Perfil",
-        'profile_desc': "Gestiona tu perfil de freelancer",
+        'profile_desc': "Gestiona tu perfil de freelancer y CV",
         'applications': "Aplicaciones",
         'applications_desc': "Ver y gestionar tus solicitudes de empleo",
         'about': "Acerca de HustleX",
@@ -650,7 +667,7 @@ MAIN_MENU_MESSAGES = {
     'fr': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nChoisissez un onglet:",
         'profile': "Profil",
-        'profile_desc': "Gérez votre profil de freelance",
+        'profile_desc': "Gérez votre profil de freelance et CV",
         'applications': "Candidatures",
         'applications_desc': "Voir et gérer vos candidatures",
         'about': "À propos de HustleX",
@@ -661,7 +678,7 @@ MAIN_MENU_MESSAGES = {
     'de': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nWählen Sie einen Tab:",
         'profile': "Profil",
-        'profile_desc': "Verwalten Sie Ihr Freelancer-Profil",
+        'profile_desc': "Verwalten Sie Ihr Freelancer-Profil und CV",
         'applications': "Bewerbungen",
         'applications_desc': "Bewerbungen anzeigen und verwalten",
         'about': "Über HustleX",
@@ -672,7 +689,7 @@ MAIN_MENU_MESSAGES = {
     'it': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nScegli una scheda:",
         'profile': "Profilo",
-        'profile_desc': "Gestisci il tuo profilo freelance",
+        'profile_desc': "Gestisci il tuo profilo freelance e CV",
         'applications': "Candidature",
         'applications_desc': "Visualizza e gestisci le tue candidature",
         'about': "Informazioni su HustleX",
@@ -683,7 +700,7 @@ MAIN_MENU_MESSAGES = {
     'pt': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nEscolha uma aba:",
         'profile': "Perfil",
-        'profile_desc': "Gerencie seu perfil de freelancer",
+        'profile_desc': "Gerencie seu perfil de freelancer e CV",
         'applications': "Candidaturas",
         'applications_desc': "Visualize e gerencie suas candidaturas",
         'about': "Sobre o HustleX",
@@ -694,7 +711,7 @@ MAIN_MENU_MESSAGES = {
     'am': {
         'title': "🌐 https://hustlexet.vercel.app/\n\nአንድ ትር ይምረጡ:",
         'profile': "መገለጫ",
-        'profile_desc': "የእርስዎን ፍሪላንሰር መገለጫ ያስተዳድሩ",
+        'profile_desc': "የእርስዎን ፍሪላንሰር መገለጫ እና CV ያስተዳድሩ",
         'applications': "ማመልከቻዎች",
         'applications_desc': "የስራ መጠየቅዎችን ይመልከቱ እና ያስተዳድሩ",
         'about': "ስለ HustleX",
@@ -708,11 +725,9 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     lang_code = user_languages.get(user_id, 'en')
     messages = MAIN_MENU_MESSAGES.get(lang_code, MAIN_MENU_MESSAGES['en'])
 
-    post_job_text = "📮 Post a Job"
     keyboard = [
         [KeyboardButton(f"📋 {messages['applications']}"), KeyboardButton(f"👤 {messages['profile']}")],
-        [KeyboardButton(f"📮 Post a Job"), KeyboardButton(f"⚙️ {messages['settings']}")],
-        [KeyboardButton(f"ℹ️ {messages['about']}")]
+        [KeyboardButton(f"⚙️ {messages['settings']}"), KeyboardButton(f"ℹ️ {messages['about']}")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -724,7 +739,6 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     menu_text += "*⚔️ Your Arsenal:*\n"
     menu_text += f"📋 {messages['applications']} — Track your conquests, seal the deals\n"
     menu_text += f"👤 {messages['profile']} — Your digital throne, flex your empire\n"
-    menu_text += f"📮 Post a Job — Find your next freelancer\n"
     menu_text += f"⚙️ {messages['settings']} — Calibrate your battlefield\n"
     menu_text += f"ℹ️ {messages['about']} — Know the kingdom you're building in\n\n"
     menu_text += "Let's make moves. 🚀"
@@ -1030,6 +1044,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '👤 Konto': 'settings_account',
         '👤 Conta': 'settings_account',
         '👤 መለያ': 'settings_account',
+        '📄 My CV': 'settings_cv',
+        '📄 Mi CV': 'settings_cv',
+        '📄 Mon CV': 'settings_cv',
+        '📄 Mein Lebenslauf': 'settings_cv',
+        '📄 Il Mio CV': 'settings_cv',
+        '📄 Meu CV': 'settings_cv',
+        '📄 የእኔ CV': 'settings_cv',
         '📋 Terms and Conditions': 'settings_terms',
         '📋 Términos y Condiciones': 'settings_terms',
         '📋 Termes et Conditions': 'settings_terms',
@@ -1059,10 +1080,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '🗑️ Delete Account': 'account_delete',
         '⬅️ Back to Account': 'settings_account',
         '❌ Cancel': 'settings_account',
+        # CV settings buttons
+        '👁️ View Current CV': 'cv_view',
+        '📤 Upload New CV': 'cv_upload',
+        '🗑️ Remove CV': 'cv_remove',
         # Terms settings buttons
         '🔒 Privacy Policy': 'terms_privacy',
-        # Post a Job
-        '📮 Post a Job': 'post_job_telegram',
+        # Back to CV
+        '⬅️ Back to My CV': 'settings_cv',
         # Back to languages
         '⬅️ Back to Languages': 'settings_languages',
         '⬅️ Volver a Idiomas': 'settings_languages',
@@ -1107,6 +1132,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Your account has been permanently deleted from HustleX.\n\n"
             "What was removed:\n"
             "- Profile information\n"
+            "- Uploaded CV and documents\n"
             "- Notification preferences\n"
             "- All saved data\n\n"
             "Thank you for using HustleX. You can create a new account anytime by using /start.\n\n"
@@ -1127,7 +1153,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if action is None:
         return
 
-    if action in ('profile', 'applications', 'about', 'settings', 'settings_languages', 'settings_account', 'settings_terms', 'account_view_profile', 'account_notifications', 'account_delete', 'terms_privacy', 'post_job_telegram'):
+    if action in ('profile', 'applications', 'about', 'settings', 'settings_languages', 'settings_account', 'settings_cv', 'settings_terms', 'account_view_profile', 'account_notifications', 'account_delete', 'cv_view', 'cv_upload', 'cv_remove', 'terms_privacy'):
         if not await require_registration(update, context):
             return
     
@@ -1202,6 +1228,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await settings_languages_cb(update, context)
     elif action == 'settings_account':
         await settings_account_cb(update, context)
+    elif action == 'settings_cv':
+        await settings_cv_cb(update, context)
     elif action == 'settings_terms':
         await settings_terms_cb(update, context)
     elif action and action.startswith('lang_'):
@@ -1299,11 +1327,44 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_notification_settings(update, context)
     elif action == 'account_delete':
         await send_delete_confirmation(update, context)
+    elif action == 'cv_view':
+        user_id = update.effective_user.id
+        cv_data = get_user_cv(user_id)
+        if cv_data is not None and cv_data.get("cv_file_data") is not None:
+            file_bytes = cv_data["cv_file_data"]
+            filename = cv_data.get("cv_filename", "cv.pdf")
+            await update.effective_message.reply_text(f"👁️ *Your CV*\n\n📁 *File:* {filename}\n\n📎 Sending file...", parse_mode="Markdown")
+            await context.bot.send_document(
+                chat_id=user_id,
+                document=io.BytesIO(file_bytes if isinstance(file_bytes, bytes) else bytes(file_bytes)),
+                filename=filename,
+                caption=f"📄 Your CV: {filename}"
+            )
+        else:
+            await update.effective_message.reply_text("❌ No CV uploaded yet!", parse_mode="Markdown")
+    elif action == 'cv_upload':
+        await update.effective_message.reply_text("📤 *Upload CV*\n\nPlease send your CV file as a document (PDF or DOCX).", parse_mode="Markdown")
+    elif action == 'cv_remove':
+        user_id = update.effective_user.id
+        cv_data = get_user_cv(user_id)
+        if cv_data is not None and cv_data.get("cv_file_data") is not None:
+            save_profile_fields(user_id, {
+                "cv_file_data": None,
+                "cv_filename": None,
+                "cv_mime_type": None,
+                "cv_file_size": None,
+                "cv_upload_date": None,
+            })
+            user_cvs.pop(user_id, None)
+            await update.effective_message.reply_text("✅ CV removed successfully!", parse_mode="Markdown")
+        else:
+            await update.effective_message.reply_text("❌ No CV to remove!", parse_mode="Markdown")
     elif action == 'terms_privacy':
         await update.effective_message.reply_text(
             "🔒 *Privacy Policy*\n\n"
             "We take your privacy seriously. Here's what we do:\n\n"
             "• We don't share your personal information without consent\n"
+            "• CVs are stored securely and only shared with your consent\n"
             "• You can delete your data at any time",
             parse_mode="Markdown"
         )
@@ -1362,6 +1423,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'instruction': "Choose a category to manage your preferences:",
             'languages': "🌍 Languages",
             'account': "👤 Account",
+            'cv': "📄 My CV",
             'terms': "📋 Terms and Conditions",
             'back': "⬅️ Back to Menu"
         },
@@ -1370,6 +1432,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'instruction': "Elige una categoría para gestionar tus preferencias:",
             'languages': "🌍 Idiomas",
             'account': "👤 Cuenta",
+            'cv': "📄 Mi CV",
             'terms': "📋 Términos y Condiciones",
             'back': "⬅️ Volver al Menú"
         },
@@ -1378,6 +1441,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'instruction': "Choisissez une catégorie pour gérer vos préférences:",
             'languages': "🌍 Langues",
             'account': "👤 Compte",
+            'cv': "📄 Mon CV",
             'terms': "📋 Termes et Conditions",
             'back': "⬅️ Retour au Menu"
         },
@@ -1386,6 +1450,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'instruction': "Wählen Sie eine Kategorie zur Verwaltung Ihrer Einstellungen:",
             'languages': "🌍 Sprachen",
             'account': "👤 Konto",
+            'cv': "📄 Mein Lebenslauf",
             'terms': "📋 Geschäftsbedingungen",
             'back': "⬅️ Zurück zum Menü"
         },
@@ -1394,6 +1459,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'instruction': "Scegli una categoria per gestire le tue preferenze:",
             'languages': "🌍 Lingue",
             'account': "👤 Account",
+            'cv': "📄 Il Mio CV",
             'terms': "📋 Termini e Condizioni",
             'back': "⬅️ Torna al Menu"
         },
@@ -1402,6 +1468,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'instruction': "Escolha uma categoria para gerenciar suas preferências:",
             'languages': "🌍 Idiomas",
             'account': "👤 Conta",
+            'cv': "📄 Meu CV",
             'terms': "📋 Termos e Condições",
             'back': "⬅️ Voltar ao Menu"
         },
@@ -1410,6 +1477,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'instruction': "የሚመርጡትን ለማስተካከል አንድ ምድብ ይምረጡ:",
             'languages': "🌍 ቋንቋዎች",
             'account': "👤 መለያ",
+            'cv': "📄 የእኔ CV",
             'terms': "📋 ውሎች እና ሁኔታዎች",
             'back': "⬅️ ወደ ሜኑ ይመለሱ"
         }
@@ -1419,7 +1487,7 @@ async def settings_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard = [
         [KeyboardButton(messages['languages']), KeyboardButton(messages['account'])],
-        [KeyboardButton(messages['terms'])],
+        [KeyboardButton(messages['cv']), KeyboardButton(messages['terms'])],
         [KeyboardButton(messages['back'])]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -1578,6 +1646,52 @@ async def settings_account_cb(update: Update, context: ContextTypes.DEFAULT_TYPE
         except:
             pass
 
+async def settings_cv_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    cv_data = get_user_cv(user_id)
+    has_cv = cv_data is not None and cv_data.get("cv_file_data") is not None
+    
+    if has_cv:
+        filename = cv_data.get("cv_filename", "Unknown")
+        keyboard = [
+            [KeyboardButton("👁️ View Current CV"), KeyboardButton("📤 Upload New CV")],
+            [KeyboardButton("🗑️ Remove CV"), KeyboardButton("⬅️ Back to Settings")]
+        ]
+        status_text = f"✅ CV uploaded: {filename}"
+    else:
+        keyboard = [
+            [KeyboardButton("📤 Upload New CV"), KeyboardButton("⬅️ Back to Settings")]
+        ]
+        status_text = "❌ No CV uploaded"
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
+    if update.callback_query:
+        q = update.callback_query
+        await q.answer()
+        await safe_edit_message(
+            q,
+            f"📄 *My CV*\n\n"
+            f"📁 *Current Status:* {status_text}\n"
+            f"📝 *Supported formats:* PDF, DOCX\n"
+            f"📏 *Max file size:* 16 MB\n\n"
+            f"💡 *Tip:* A well-formatted CV increases your chances of getting hired!\n\n"
+            f"Choose an option below:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown",
+            context=context
+        )
+    else:
+        await update.effective_message.reply_text(
+            f"📄 *My CV*\n\n"
+            f"📁 *Current Status:* {status_text}\n"
+            f"📝 *Supported formats:* PDF, DOCX\n"
+            f"📏 *Max file size:* 16 MB\n\n"
+            f"💡 *Tip:* A well-formatted CV increases your chances of getting hired!\n\n"
+            f"Choose an option below:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+
 async def settings_terms_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [KeyboardButton("🔒 Privacy Policy"), KeyboardButton("⬅️ Back to Settings")]
@@ -1596,7 +1710,8 @@ async def settings_terms_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Spam or harassment of other users\n"
         "• Sharing inappropriate content\n\n"
         "🛡️ *Privacy:*\n"
-        "• We protect your personal information\n\n"
+        "• We protect your personal information\n"
+        "• CVs are stored securely and only shared with your consent\n\n"
         "📞 *Contact:* @HustleXSupport for questions"
     )
     
@@ -1695,6 +1810,147 @@ async def language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         parse_mode="Markdown",
         context=context
     )
+
+async def cv_upload_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    
+    keyboard = [
+        [InlineKeyboardButton("⬅️ Back to My CV", callback_data="settings_cv")]
+    ]
+    
+    await safe_edit_message(
+        q,
+        "📤 *Upload CV*\n\n"
+        "📎 Please send your CV file as a document.\n\n"
+        "📝 *Supported formats:*\n"
+        "• PDF (.pdf)\n"
+        "• Word Document (.docx)\n\n"
+        "📏 *Requirements:*\n"
+        "• Maximum file size: 16 MB\n"
+        "• File should be clearly readable\n\n"
+        "💡 *Tip:* Make sure your CV is up-to-date with your latest experience!",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+        context=context
+    )
+
+async def cv_view_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    
+    user_id = update.effective_user.id
+    cv_data = get_user_cv(user_id)
+    
+    if cv_data is not None and cv_data.get("cv_file_data") is not None:
+        file_bytes = cv_data["cv_file_data"]
+        filename = cv_data.get("cv_filename", "cv.pdf")
+        mime_type = cv_data.get("cv_mime_type", "application/pdf")
+        
+        # Send the CV file directly to the user
+        await q.edit_message_text(
+            f"👁️ *Sending your CV...*\n\n"
+            f"📁 *File:* {filename}",
+            parse_mode="Markdown"
+        )
+        
+        await context.bot.send_document(
+            chat_id=user_id,
+            document=io.BytesIO(file_bytes if isinstance(file_bytes, bytes) else bytes(file_bytes)),
+            filename=filename,
+            caption=f"📄 Your CV: {filename}"
+        )
+        
+        keyboard = [
+            [InlineKeyboardButton("📤 Upload New CV", callback_data="cv_upload")],
+            [InlineKeyboardButton("🗑️ Remove CV", callback_data="cv_remove")],
+            [InlineKeyboardButton("⬅️ Back to My CV", callback_data="settings_cv")]
+        ]
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="💼 *Want to update or remove your CV?*",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+    else:
+        keyboard = [
+            [InlineKeyboardButton("📤 Upload New CV", callback_data="cv_upload")],
+            [InlineKeyboardButton("⬅️ Back to My CV", callback_data="settings_cv")]
+        ]
+        
+        await safe_edit_message(
+            q,
+            "👁️ *View CV*\n\n"
+            "📁 *Status:* No CV uploaded yet\n\n"
+            "📝 Once you upload a CV, you'll be able to:\n"
+            "• Preview your CV\n"
+            "• Download a copy\n"
+            "• Share it with potential employers\n"
+            "• Update it anytime\n\n"
+            "💼 *Ready to upload your CV?*",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            context=context
+        )
+
+# ---------------------------
+# CV Removal Handler
+# ---------------------------
+async def cv_remove_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    
+    user_id = update.effective_user.id
+    cv_data = get_user_cv(user_id)
+    has_cv = cv_data is not None and cv_data.get("cv_file_data") is not None
+    
+    if has_cv:
+        # Remove CV from MongoDB
+        save_profile_fields(user_id, {
+            "cv_file_data": None,
+            "cv_filename": None,
+            "cv_mime_type": None,
+            "cv_file_size": None,
+            "cv_upload_date": None,
+        })
+        
+        # Remove from in-memory too
+        user_cvs.pop(user_id, None)
+        
+        keyboard = [
+            [InlineKeyboardButton("📤 Upload New CV", callback_data="cv_upload")],
+            [InlineKeyboardButton("⬅️ Back to My CV", callback_data="settings_cv")]
+        ]
+        
+        await safe_edit_message(
+            q,
+            "🗑️ *CV Removed Successfully*\n\n"
+            "✅ Your CV has been permanently deleted from our system.\n\n"
+            "📝 *What's next?*\n"
+            "• Upload a new CV anytime\n"
+            "• Your profile remains active\n"
+            "• Previous job applications are unaffected\n\n"
+            "💼 *Ready to upload a new CV?*",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            context=context
+        )
+    else:
+        keyboard = [
+            [InlineKeyboardButton("📤 Upload CV", callback_data="cv_upload")],
+            [InlineKeyboardButton("⬅️ Back to My CV", callback_data="settings_cv")]
+        ]
+        
+        await safe_edit_message(
+            q,
+            "❌ *No CV Found*\n\n"
+            "There's no CV to remove. You haven't uploaded one yet.\n\n"
+            "💼 *Want to upload your CV?*",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            context=context
+        )
 
 # ---------------------------
 # Account Management Handlers
@@ -2262,6 +2518,7 @@ async def send_delete_confirmation(update, context):
         "WARNING: This action is permanent and cannot be undone!\n\n"
         "What will be deleted:\n"
         "- Your profile information\n"
+        "- Uploaded CV and documents\n"
         "- Job application history\n"
         "- All saved preferences\n\n"
         "Are you sure you want to permanently delete your account?\n\n"
@@ -2283,10 +2540,12 @@ async def privacy_policy_handler(update: Update, context: ContextTypes.DEFAULT_T
         "Your privacy is important to us. Here's how we protect your data:\n\n"
         "Data We Collect:\n"
         "- Basic profile information (name, username)\n"
+        "- CVs and documents you upload\n"
         "- Job application history\n"
         "- Usage analytics (anonymous)\n\n"
         "How We Protect Your Data:\n"
         "- Encrypted storage of all personal information\n"
+        "- Secure file handling for CVs and documents\n"
         "- No sharing of personal data with third parties\n"
         "- Regular security audits and updates\n\n"
         "How We Use Your Data:\n"
@@ -2332,7 +2591,7 @@ async def save_profile_to_api(user_id, profile_data):
         return False
 
 # ---------------------------
-# Profile photo handler
+# File uploads handler (CV / profile picture)
 # ---------------------------
 async def file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     m = update.message
@@ -2341,7 +2600,65 @@ async def file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if we're waiting for a profile photo
     awaiting_photo = context.user_data.get('awaiting_input') == 'photo'
     
-    if m.photo:
+    if m.document:
+        # Check if it's a CV file (PDF or DOCX)
+        file_name = m.document.file_name or "document"
+        file_size = m.document.file_size
+        mime_type = m.document.mime_type
+        
+        # Validate file type
+        if file_name.lower().endswith(('.pdf', '.docx')) or mime_type in ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+            # Download actual file bytes from Telegram
+            try:
+                tele_file = await context.bot.get_file(m.document.file_id)
+                file_bytes = await tele_file.download_as_bytearray()
+            except Exception as e:
+                logger.error(f"Failed to download CV file: {e}")
+                file_bytes = None
+            
+            # Save to MongoDB
+            cv_fields = {
+                "cv_file_data": file_bytes,
+                "cv_filename": file_name,
+                "cv_mime_type": mime_type,
+                "cv_file_size": file_size,
+                "cv_upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            save_profile_fields(user_id, cv_fields)
+            
+            # Also keep in-memory for fast access
+            user_cvs[user_id] = {
+                'file_id': m.document.file_id,
+                'filename': file_name,
+                'file_size': file_size,
+                'mime_type': mime_type,
+                'upload_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
+            keyboard = [
+                [InlineKeyboardButton("👁️ View CV", callback_data="cv_view")],
+                [InlineKeyboardButton("📄 My CV Settings", callback_data="settings_cv")]
+            ]
+            
+            await m.reply_text(
+                f"✅ *CV Upload Successful!*\n\n"
+                f"📁 *File:* {file_name}\n"
+                f"📏 *Size:* {file_size:,} bytes\n"
+                f"📝 *Type:* {'PDF' if file_name.lower().endswith('.pdf') else 'Word Document'}\n\n"
+                f"🎉 Your CV is now ready for job applications!",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        else:
+            await m.reply_text(
+                "❌ *Invalid File Type*\n\n"
+                "Please upload a PDF (.pdf) or Word document (.docx) file.\n\n"
+                "📝 *Supported formats:*\n"
+                "• PDF (.pdf)\n"
+                "• Word Document (.docx)"
+            )
+            
+    elif m.photo:
         file_id = m.photo[-1].file_id
         
         # Initialize user profile if not exists
@@ -2768,10 +3085,16 @@ def main():
     # Settings tab handlers
     app.add_handler(CallbackQueryHandler(settings_languages_cb, pattern="^settings_languages$"))
     app.add_handler(CallbackQueryHandler(settings_account_cb, pattern="^settings_account$"))
+    app.add_handler(CallbackQueryHandler(settings_cv_cb, pattern="^settings_cv$"))
     app.add_handler(CallbackQueryHandler(settings_terms_cb, pattern="^settings_terms$"))
 
     # Language selection handlers
     app.add_handler(CallbackQueryHandler(language_selection, pattern="^lang_"))
+
+    # CV action handlers
+    app.add_handler(CallbackQueryHandler(cv_upload_handler, pattern="^cv_upload$"))
+    app.add_handler(CallbackQueryHandler(cv_view_handler, pattern="^cv_view$"))
+    app.add_handler(CallbackQueryHandler(cv_remove_handler, pattern="^cv_remove$"))
 
     # Account management handlers
     app.add_handler(CallbackQueryHandler(account_edit_profile_handler, pattern="^account_edit_profile$"))
@@ -2786,7 +3109,7 @@ def main():
     job_post_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(post_job_start, pattern="^post_job_telegram$"),
                       CommandHandler("postjob", post_job_start),
-                      MessageHandler(filters.Regex(r'^📮 Post a Job$') | filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$'), post_job_start)],
+                      MessageHandler(filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$'), post_job_start)],
         states={
             JOB_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_title)],
             JOB_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_type)],
@@ -2805,8 +3128,8 @@ def main():
     )
     app.add_handler(job_post_conv)
 
-    # Photo handler
-    app.add_handler(MessageHandler(filters.PHOTO, file_handler))
+    # File/message handlers
+    app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_handler))
 
     # Web app data handler
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
