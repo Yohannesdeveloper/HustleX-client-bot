@@ -2352,20 +2352,37 @@ async def general_text_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log errors and handle them gracefully"""
     logger.error("Exception while handling an update:", exc_info=context.error)
-    
-    # Handle specific error types
-    if "Message to edit not found" in str(context.error):
-        # This error is already handled by safe_edit_message, just log it
-        logger.info("Message edit failed - message not found")
-    elif update and hasattr(update, 'effective_chat') and update.effective_chat:
-        # Send a generic error message to the user
-        try:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="⚠️ Something went wrong. Please try again or use /start to restart."
+
+    # ── EARLY GUARD: never send anything to a channel ────────────────────────
+    # channel_post / edited_channel_post are posted by the backend, not real users.
+    # Sending an error reply to the channel would spam the channel with bot messages.
+    if update is not None:
+        is_channel = (
+            getattr(update, 'channel_post', None) is not None
+            or getattr(update, 'edited_channel_post', None) is not None
+            or (
+                hasattr(update, 'effective_chat')
+                and update.effective_chat is not None
+                and getattr(update.effective_chat, 'type', None) == 'channel'
             )
-        except Exception:
-            pass  # If we can't even send a message, just log it
+        )
+        if is_channel:
+            logger.info("Error in channel update – silently ignoring to avoid channel spam")
+            return
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # Handle specific known error types that don't need user notification
+    if "Message to edit not found" in str(context.error):
+        logger.info("Message edit failed - message not found")
+        return
+    if "Conversation is already ended" in str(context.error):
+        logger.info("Conversation already ended - ignoring update")
+        return
+    if "Timed out" in str(context.error):
+        logger.info("Request timed out")
+        return
+
+    # No user-facing error message – errors are logged only (silent handling)
 
 def main():
     async def post_init(application):
@@ -2511,13 +2528,24 @@ def main():
     app.add_handler(MessageHandler(filters.Regex(r"^⬅️ ወደ ቋንቋዎች ይመለሱ$"), settings_languages_cb))
 
     # File/message handlers
-    app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_handler))
+    app.add_handler(MessageHandler((filters.Document.ALL | filters.PHOTO) & ~filters.ChatType.CHANNEL, file_handler))
     
     # General text input handler (for name/contact editing) - must be last
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, general_text_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, general_text_handler))
 
-    # Run bot
-    app.run_polling()
+    # Run bot — explicitly exclude channel_post and edited_channel_post updates
+    # so the bot never receives messages posted to the channel by the backend.
+    # This is the primary guard that prevents the error_handler from ever being
+    # triggered for channel posts.
+    app.run_polling(
+        allowed_updates=[
+            "message",
+            "callback_query",
+            "inline_query",
+            "chat_member",
+            "my_chat_member",
+        ]
+    )
 
 if __name__ == "__main__":
     main()

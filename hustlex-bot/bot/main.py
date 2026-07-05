@@ -2576,20 +2576,37 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log errors and handle them gracefully"""
     logger.error("Exception while handling an update:", exc_info=context.error)
-    
-    # Handle specific error types
-    if "Message to edit not found" in str(context.error):
-        # This error is already handled by safe_edit_message, just log it
-        logger.info("Message edit failed - message not found")
-    elif update and hasattr(update, 'effective_chat') and update.effective_chat:
-        # Send a generic error message to the user
-        try:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="⚠️ Something went wrong. Please try again or use /start to restart."
+
+    # ── EARLY GUARD: never send anything to a channel ────────────────────────
+    # channel_post / edited_channel_post are posted by the backend, not real users.
+    # Sending an error reply to the channel would spam the channel with bot messages.
+    if update is not None:
+        is_channel = (
+            getattr(update, 'channel_post', None) is not None
+            or getattr(update, 'edited_channel_post', None) is not None
+            or (
+                hasattr(update, 'effective_chat')
+                and update.effective_chat is not None
+                and getattr(update.effective_chat, 'type', None) == 'channel'
             )
-        except Exception:
-            pass  # If we can't even send a message, just log it
+        )
+        if is_channel:
+            logger.info("Error in channel update – silently ignoring to avoid channel spam")
+            return
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # Handle specific known error types that don't need user notification
+    if "Message to edit not found" in str(context.error):
+        logger.info("Message edit failed - message not found")
+        return
+    if "Conversation is already ended" in str(context.error):
+        logger.info("Conversation already ended - ignoring update")
+        return
+    if "Timed out" in str(context.error):
+        logger.info("Request timed out")
+        return
+
+    # No user-facing error message – errors are logged only (silent handling)
 
 
 
@@ -2778,19 +2795,19 @@ def main():
     job_post_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(post_job_start, pattern="^post_job_telegram$"),
                       CommandHandler("postjob", post_job_start),
-                      MessageHandler(filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$'), post_job_start)],
+                      MessageHandler((filters.Regex(r'^Post Job in Telegram$') | filters.Regex(r'^Publicar Trabajo en Telegram$') | filters.Regex(r'^Publier un Emploi sur Telegram$') | filters.Regex(r'^Stelle in Telegram veröffentlichen$') | filters.Regex(r'^Pubblica Lavoro su Telegram$') | filters.Regex(r'^Publicar Emprego no Telegram$') | filters.Regex(r'^ሥራን በቴሌግራም ያስቀምጡ$')) & ~filters.ChatType.CHANNEL, post_job_start)],
         states={
-            JOB_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_title)],
-            JOB_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_type)],
-            WORK_LOCATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, work_location)],
-            SALARY: [MessageHandler(filters.TEXT & ~filters.COMMAND, salary)],
-            DEADLINE: [MessageHandler(filters.TEXT & ~filters.COMMAND, deadline)],
-            DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, description)],
-            CLIENT_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, client_type)],
-            COMPANY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, company_name)],
-            VERIFIED: [MessageHandler(filters.TEXT & ~filters.COMMAND, verified)],
-            PREVIOUS_JOBS: [MessageHandler(filters.TEXT & ~filters.COMMAND, previous_jobs)],
-            JOB_LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND, job_link)],
+            JOB_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, job_title)],
+            JOB_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, job_type)],
+            WORK_LOCATION: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, work_location)],
+            SALARY: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, salary)],
+            DEADLINE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, deadline)],
+            DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, description)],
+            CLIENT_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, client_type)],
+            COMPANY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, company_name)],
+            VERIFIED: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, verified)],
+            PREVIOUS_JOBS: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, previous_jobs)],
+            JOB_LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, job_link)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
         per_chat=True
@@ -2798,13 +2815,13 @@ def main():
     app.add_handler(job_post_conv)
 
     # Photo handler
-    app.add_handler(MessageHandler(filters.PHOTO, file_handler))
+    app.add_handler(MessageHandler(filters.PHOTO & ~filters.ChatType.CHANNEL, file_handler))
 
     # Web app data handler
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA & ~filters.ChatType.CHANNEL, handle_web_app_data))
 
     # Text menu handler — must be last
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.ChatType.CHANNEL, handle_text))
 
     # Channel message handler (profile card sync) — runs after everything else
     app.add_handler(MessageHandler(
@@ -2812,8 +2829,19 @@ def main():
         handle_channel_profile_message,
     ), group=1)
 
-    # Run bot
-    app.run_polling()
+    # Run bot — explicitly exclude channel_post and edited_channel_post updates
+    # so the bot never receives messages posted to the channel by the backend.
+    # This is the primary guard that prevents the error_handler from ever being
+    # triggered for channel posts.
+    app.run_polling(
+        allowed_updates=[
+            "message",
+            "callback_query",
+            "inline_query",
+            "chat_member",
+            "my_chat_member",
+        ]
+    )
 
 if __name__ == "__main__":
     main()
