@@ -455,7 +455,7 @@ async def save_freelancer_profile(request: Request):
 
     # Send main menu automatically with keyboard
     menu_text_html = (
-        "🌐 https://hustlexet.vercel.app/\n\n"
+        "🌐 https://hustlexet.com/\n\n"
         "🔥 <b>Welcome to the Arena, Champion!</b> 🔥\n\n"
         "You're now in the <b>HustleX command center</b> — where freelancers become legends "
         "and clients find their secret weapons. Every tab is a tool. Every click is a power-up.\n\n"
@@ -465,7 +465,7 @@ async def save_freelancer_profile(request: Request):
         "⚙️ Settings — Calibrate your battlefield\n"
         "ℹ️ About HustleX — Know the kingdom you're building in\n\n"
         "Let's make moves. 🚀\n\n"
-        "HustleX (https://hustlexet.vercel.app/)\n"
+        "HustleX (https://hustlexet.com/)\n"
         "HustleX — Hire Elite Freelancers Worldwide\n"
         "Connect with top 1% freelancers in web development, MERN stack, UI/UX design & AI services. The premium marketplace for excellence."
     )

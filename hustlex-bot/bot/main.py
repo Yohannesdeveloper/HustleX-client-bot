@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env
 load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://hustlexet.vercel.app/")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://hustlexet.com/")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://yohannesfk123:CKNujByIaepiwyGf@cluster0.mrtm8aj.mongodb.net/hustlex?retryWrites=true&w=majority&appName=Cluster0")
 
 # MongoDB connection setup
@@ -626,7 +626,7 @@ async def safe_edit_message(query, text, reply_markup=None, parse_mode=None, con
 
 MAIN_MENU_MESSAGES = {
     'en': {
-        'title': "🌐 https://hustlexet.vercel.app/\n\nChoose a tab:",
+        'title': "🌐 https://hustlexet.com/\n\nChoose a tab:",
         'profile': "Profile",
         'profile_desc': "Manage your freelancer profile",
         'applications': "Applications",
@@ -637,7 +637,7 @@ MAIN_MENU_MESSAGES = {
         'settings_desc': "Configure your preferences and account",
     },
     'es': {
-        'title': "🌐 https://hustlexet.vercel.app/\n\nElige una pestaña:",
+        'title': "🌐 https://hustlexet.com/\n\nElige una pestaña:",
         'profile': "Perfil",
         'profile_desc': "Gestiona tu perfil de freelancer",
         'applications': "Aplicaciones",
@@ -648,7 +648,7 @@ MAIN_MENU_MESSAGES = {
         'settings_desc': "Configura tus preferencias y cuenta",
     },
     'fr': {
-        'title': "🌐 https://hustlexet.vercel.app/\n\nChoisissez un onglet:",
+        'title': "🌐 https://hustlexet.com/\n\nChoisissez un onglet:",
         'profile': "Profil",
         'profile_desc': "Gérez votre profil de freelance",
         'applications': "Candidatures",
@@ -659,7 +659,7 @@ MAIN_MENU_MESSAGES = {
         'settings_desc': "Configurez vos préférences et compte",
     },
     'de': {
-        'title': "🌐 https://hustlexet.vercel.app/\n\nWählen Sie einen Tab:",
+        'title': "🌐 https://hustlexet.com/\n\nWählen Sie einen Tab:",
         'profile': "Profil",
         'profile_desc': "Verwalten Sie Ihr Freelancer-Profil",
         'applications': "Bewerbungen",
@@ -670,7 +670,7 @@ MAIN_MENU_MESSAGES = {
         'settings_desc': "Konfigurieren Sie Ihre Präferenzen und Konto",
     },
     'it': {
-        'title': "🌐 https://hustlexet.vercel.app/\n\nScegli una scheda:",
+        'title': "🌐 https://hustlexet.com/\n\nScegli una scheda:",
         'profile': "Profilo",
         'profile_desc': "Gestisci il tuo profilo freelance",
         'applications': "Candidature",
@@ -681,7 +681,7 @@ MAIN_MENU_MESSAGES = {
         'settings_desc': "Configura le tue preferenze e account",
     },
     'pt': {
-        'title': "🌐 https://hustlexet.vercel.app/\n\nEscolha uma aba:",
+        'title': "🌐 https://hustlexet.com/\n\nEscolha uma aba:",
         'profile': "Perfil",
         'profile_desc': "Gerencie seu perfil de freelancer",
         'applications': "Candidaturas",
@@ -692,7 +692,7 @@ MAIN_MENU_MESSAGES = {
         'settings_desc': "Configure suas preferências e conta",
     },
     'am': {
-        'title': "🌐 https://hustlexet.vercel.app/\n\nአንድ ትር ይምረጡ:",
+        'title': "🌐 https://hustlexet.com/\n\nአንድ ትር ይምረጡ:",
         'profile': "መገለጫ",
         'profile_desc': "የእርስዎን ፍሪላንሰር መገለጫ ያስተዳድሩ",
         'applications': "ማመልከቻዎች",
@@ -716,7 +716,7 @@ async def send_main_menu_to_user(bot, user_id, chat_id=None, profile_just_comple
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
     menu_text = (
-        "🌐 https://hustlexet.vercel.app/\n\n"
+        "🌐 https://hustlexet.com/\n\n"
         "Choose a tab:\n\n"
         "🔥 *Welcome to the Arena, Champion!* 🔥\n\n"
         "You're now in the *HustleX command center* — where freelancers become legends "
@@ -1136,7 +1136,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if action == 'menu':
         await menu_callback(update, context)
     elif action == 'post_job_telegram':
-        post_job_url = "https://hustlexet.vercel.app/post-job"
+        post_job_url = "https://hustlexet.com/post-job"
         keyboard = [[InlineKeyboardButton("📮 Post a Job", web_app=WebAppInfo(url=post_job_url))]]
         await update.effective_message.reply_text(
             "📮 *Post a Job*\n\n"
@@ -1149,7 +1149,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     elif action == 'profile':
-        profile_url = "https://hustlexet.vercel.app/company-profile"
+        profile_url = "https://hustlexet.com/company-profile"
         keyboard = [[InlineKeyboardButton("👤 Open Company Profile", web_app=WebAppInfo(url=profile_url))]]
         await update.effective_message.reply_text(
             "👤 *Company Profile*\n\n"
@@ -1162,7 +1162,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     elif action == 'applications':
-        applications_url = "https://hustlexet.vercel.app/applications-management"
+        applications_url = "https://hustlexet.com/applications-management"
         keyboard = [[InlineKeyboardButton("📋 Manage Applications", web_app=WebAppInfo(url=applications_url))]]
         await update.effective_message.reply_text(
             "📋 *Applications*\n\n"
@@ -1306,7 +1306,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------------------
 async def applications_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    applications_url = f"https://hustlexet.vercel.app/my-applications?user_id={user_id}"
+    applications_url = f"https://hustlexet.com/my-applications?user_id={user_id}"
     if update.callback_query:
         q = update.callback_query
         await q.answer()
@@ -2753,7 +2753,7 @@ def main():
     app.add_error_handler(error_handler)
 
     async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        profile_url = "https://hustlexet.vercel.app/company-profile"
+        profile_url = "https://hustlexet.com/company-profile"
         await update.effective_message.reply_text(
             f"👤 *Company Profile*\n\nYour digital fortress — build your company profile and attract top 1% freelancers.",
             parse_mode="Markdown"
